@@ -1,0 +1,1 @@
+export { print, hello } from "./hello";
