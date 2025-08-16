@@ -1,6 +1,6 @@
 import { defineConfig } from "tsup";
 
-module.exports = defineConfig({
+export default defineConfig({
   format: ["cjs", "esm"],
   entry: ["./src/index.ts"],
   dts: true,
