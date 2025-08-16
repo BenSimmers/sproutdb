@@ -1,5 +1,6 @@
 import { describe, beforeEach, afterEach, it, expect } from "vitest";
 import { table, create } from "../src";
+import { arrayOrSingle } from "./helpers/arrayOrSingle";
 
 type User = {
     id: string;
@@ -45,6 +46,20 @@ describe("creating a database with multiple tables", () => {
 
     it("should be able to update a record in the table", () => {
         db.users.update({ where: { id: "1" } }, { email: "alice@newdomain.com" });
-        expect(db.users.find({ where: { id: "1" } })[0].email).toBe("alice@newdomain.com");
+        const foundUser = db.users.find({ where: { id: "1" } });
+        arrayOrSingle(foundUser).forEach(user => {
+            expect(user.email).toBe("alice@newdomain.com");
+        });
+
+
+    });
+
+    it("should be able to find a record in the table", () => {
+        const user = db.users.find({ where: { id: "1" } });
+        expect(user).toBeDefined();
+        arrayOrSingle(user).forEach(u => {
+            expect(u.name).toBe("Alice");
+        });
+
     });
 });

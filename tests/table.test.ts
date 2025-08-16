@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { table } from "../src";
+import { arrayOrSingle } from "./helpers/arrayOrSingle";
 
 type User = {
     id: string;
@@ -14,7 +15,7 @@ describe("creating a table", () => {
     beforeEach(() => {
         users.insert({ id: "1", name: "Alice", email: "alice@example.com" });
     });
-
+    
     afterEach(() => {
         users.delete({ where: { id: "1" } });
     });
@@ -31,13 +32,18 @@ describe("creating a table", () => {
 
     it("should update a record", () => {
         users.update({ where: { id: "1" } }, { email: "alice@newdomain.com" });
-        expect(users.find({ where: { id: "1" } })[0].email).toBe("alice@newdomain.com");
-    })
-
+        const foundUser = users.find({ where: { id: "1" } });
+        arrayOrSingle(foundUser).forEach(user => {
+            expect(user.email).toBe("alice@newdomain.com");
+        });
+    });
+    
     it("should find a record by query", () => {
         const found = users.find({ where: { name: "Alice" } });
-        expect(found).toHaveLength(1);
-        expect(found[0].email).toBe("alice@example.com");
+        arrayOrSingle(found).forEach(user => {
+            expect(user.email).toBe("alice@example.com");
+        });
+
     });
 
     it("should delete a record", () => {
@@ -45,5 +51,12 @@ describe("creating a table", () => {
         expect(users.find({ where: { id: "1" } })).toHaveLength(0);
     });
 
-
+    it("should be able to load records in", () => {
+        const newUsers = [
+            { id: "2", name: "Bob", email: "bob@example.com" },
+            { id: "3", name: "Charlie", email: "charlie@example.com" },
+        ];
+        users.load(newUsers);
+        expect(users.all()).toHaveLength(3);
+    });
 });
