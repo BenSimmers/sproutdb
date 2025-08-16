@@ -1,7 +1,7 @@
 /src
 
 /node_modules
-
+/.devcontainer
 tsconfig.json
 tsup.config.ts # If tsup.config.js is used, add that too
 
@@ -38,6 +38,8 @@ pnpm-debug.log*
 .DS_Store
 Thumbs.db
 
+.eslintrc.cjs
+eslint.config.js
 .eslintignore
 .eslintrc.js
 .eslintrc.json

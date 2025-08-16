@@ -10,9 +10,9 @@ interface Table<T> {
     /**
      * Finds records in the table.
      * @param query The query to use for finding records.
-     * @returns An array of matching records.
+     * @returns either an array of matching records or a single matching record.
      */
-    find(query: { where: Partial<T> }): T[];
+    find(query: { where: Partial<T> }): T[] | T;
     /**
      * Retrieves all records from the table.
      * @returns An array of all records.
