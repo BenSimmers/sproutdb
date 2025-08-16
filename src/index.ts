@@ -1,1 +1,2 @@
-export { print, hello } from "./modules/hello";
+export { create } from "./modules/create";
+export { table } from "./modules/table";
