@@ -1,5 +1,0 @@
----
-"sproutdb": patch
----
-
-update config
