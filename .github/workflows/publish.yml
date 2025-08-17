@@ -11,8 +11,6 @@ permissions:
   contents: write
   pull-requests: write
   actions: read
-  #   pages: write
-  #   id-token: write
 
 jobs:
   publish:
