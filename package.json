@@ -23,7 +23,11 @@
   },
   "keywords": [],
   "author": "Ben Simmers <bej1380@gmail.com>",
-  "license": "ISC",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BenSimmers/sproutdb.git"
+  },
   "devDependencies": {
     "@changesets/cli": "^2.29.5",
     "@eslint/js": "^9.30.0",
