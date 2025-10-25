@@ -1,5 +1,11 @@
 # sproutdb
 
+## 1.0.1
+
+### Patch Changes
+
+- b7ab1de: add documentation on how to use sproutdb
+
 ## 1.0.0
 
 ### Major Changes
