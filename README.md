@@ -1,13 +1,159 @@
-# ts-template
+# SproutDB
 
-A TypeScript template repository. This template is designed to provide a starting point for TypeScript projects.
+A tiny, dependency-free TypeScript key-value store with pluggable persistence. Now includes an HTTP server for testing and development.
 
-## Getting Started
+## Features
 
-1. Clone the repository.
-2. Run `pnpm install` to install the dependencies.
-3. Run `pnpm build` to build the project.
-4. Run `pnpm test` to run the tests.
+- **Simple API**: Easy-to-use key-value store with table-based structure
+- **TypeScript First**: TypeScript support with type safety
+- **Pluggable Persistence**: Extend with custom storage backends
+- **HTTP Server**: REST API for database operations
+- **npx Command**: Run a test database server instantly
+- **Seeding**: Load initial data from JSON files or folders
+
+## Installation
+
+```bash
+npm install sproutdb
+```
+
+Or use directly with npx:
+
+```bash
+npx sproutdb
+```
+
+## Quick Start
+
+### As a Library
+
+```typescript
+import { create, table } from 'sproutdb';
+
+const db = create({
+  users: table<{ id: number; name: string; email: string }>(),
+  posts: table<{ id: number; title: string; content: string }>(),
+});
+
+// Insert data
+db.users.insert({ id: 1, name: 'Alice', email: 'alice@example.com' });
+
+// Find data
+const user = db.users.find({ where: { id: 1 } });
+
+// Get all
+const allUsers = db.users.all();
+
+// Update
+db.users.update({ where: { id: 1 } }, { name: 'Alice Smith' });
+
+// Delete
+db.users.delete({ where: { id: 1 } });
+
+// Load multiple records
+db.users.load([
+  { id: 2, name: 'Bob', email: 'bob@example.com' },
+  { id: 3, name: 'Charlie', email: 'charlie@example.com' },
+]);
+```
+
+### As a Test Database Server
+
+Start a test database server:
+
+```bash
+npx sproutdb --port 3001
+```
+
+Or with seed data:
+
+```bash
+npx sproutdb --seed sprout.json
+```
+
+The server provides REST endpoints at `http://localhost:3000` (or specified port).
+
+## API Reference
+
+### Database Operations
+
+#### `create(schema)` → Database
+Creates a new database instance with the given table schema.
+
+#### `table<T>()` → Table<T>
+Creates a new table for records of type T.
+
+### Table Methods
+
+#### `insert(record: T)` → void
+Inserts a new record into the table.
+
+#### `find(query: { where: Partial<T> })` → T[] | T
+Finds records matching the query. Returns array if multiple, single if one.
+
+#### `all()` → readonly T[]
+Returns all records in the table.
+
+#### `update(query: { where: Partial<T> }, update: Partial<T>)` → void
+Updates records matching the query with the given updates.
+
+#### `delete(query: { where: Partial<T> })` → void
+Deletes records matching the query.
+
+#### `load(records: readonly T[])` → void
+Loads multiple records into the table.
+
+## REST API Endpoints
+
+When running the server, the following endpoints are available:
+
+- `POST /tables/:table/insert` - Insert a record
+- `POST /tables/:table/find` - Find records
+- `GET /tables/:table/all` - Get all records
+- `PUT /tables/:table/update` - Update records
+- `DELETE /tables/:table/delete` - Delete records
+- `POST /tables/:table/load` - Load multiple records
+
+Example request:
+
+```bash
+curl -X POST http://localhost:3000/tables/users/insert \
+  -H "Content-Type: application/json" \
+  -d '{"id": 1, "name": "Alice", "email": "alice@example.com"}'
+```
+
+## Seeding Data
+
+Create a `sprout.json` file or a `plant/` folder with JSON files:
+
+### Single File (sprout.json)
+```json
+{
+  "users": [
+    { "id": 1, "name": "Alice", "email": "alice@example.com" }
+  ],
+  "posts": [
+    { "id": 1, "title": "Hello World", "content": "..." }
+  ]
+}
+```
+
+### Folder Structure (plant/)
+```
+plant/
+  users.json
+  posts.json
+```
+
+Each `.json` file contains an array of records for that table.
+
+## Development
+
+```bash
+pnpm install
+pnpm build
+pnpm test
+```
 
 ## Changesets
 
