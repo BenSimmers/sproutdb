@@ -1,5 +1,11 @@
 # sproutdb
 
+## 1.1.0
+
+### Minor Changes
+
+- 28c2276: adding extra functionality to the find function to handle different systems which are native to the library
+
 ## 1.0.1
 
 ### Patch Changes
