@@ -1,4 +1,54 @@
 /**
+ * Operators for advanced query conditions.
+ */
+type QueryOperators<T> = {
+    $gt?: T;
+    $gte?: T;
+    $lt?: T;
+    $lte?: T;
+    $ne?: T;
+    $in?: T[];
+    $nin?: T[];
+    $regex?: string | RegExp;
+};
+
+/**
+ * A field condition that can be a simple value or use operators.
+ */
+type FieldCondition<T> = T | QueryOperators<T>;
+
+/**
+ * Complex where clause supporting operators and OR logic.
+ */
+type WhereClause<T> = {
+    [K in keyof T]?: FieldCondition<T[K]>;
+} & {
+    $or?: WhereClause<T>[];
+};
+
+/**
+ * Sort direction.
+ */
+type SortDirection = 'asc' | 'desc';
+
+/**
+ * Sort specification.
+ */
+type SortClause<T> = {
+    [K in keyof T]?: SortDirection;
+};
+
+/**
+ * Advanced query options.
+ */
+type QueryOptions<T> = {
+    where?: Partial<T> | WhereClause<T>;
+    sort?: SortClause<T>;
+    limit?: number;
+    offset?: number;
+};
+
+/**
  * Represents a table in the database.
  */
 interface Table<T> {
@@ -10,9 +60,9 @@ interface Table<T> {
     /**
      * Finds records in the table.
      * @param query The query to use for finding records.
-     * @returns either an array of matching records or a single matching record.
+     * @returns An array of matching records.
      */
-    find(query: { where: Partial<T> }): T[] | T;
+    find(query?: QueryOptions<T>): T[];
     /**
      * Retrieves all records from the table.
      * @returns An array of all records.
@@ -22,13 +72,13 @@ interface Table<T> {
      * Deletes records from the table.
      * @param query The query to use for deleting records.
      */
-    delete(query: { where: Partial<T> }): void;
+    delete(query: { where?: Partial<T> | WhereClause<T> }): void;
     /**
      * Updates records in the table.
      * @param query The query to use for finding records to update.
      * @param update The updated values to apply.
      */
-    update(query: { where: Partial<T> }, update: Partial<T>): void;
+    update(query: { where?: Partial<T> | WhereClause<T> }, update: Partial<T>): void;
     /**
      * Loads records into the table.
      * @param records The records to load.
@@ -46,4 +96,4 @@ type Database<TTables extends Record<string, Table<unknown>>> = { [K in keyof TT
  */
 type TableRecord = Record<string, Table<unknown>>;
 
-export { Table, TableRecord, Database };
+export { Table, TableRecord, Database, QueryOptions, WhereClause, SortClause, SortDirection, FieldCondition, QueryOperators };
