@@ -41,6 +41,23 @@ db.users.insert({ id: 1, name: 'Alice', email: 'alice@example.com' });
 // Find data
 const user = db.users.find({ where: { id: 1 } });
 
+// Advanced queries
+const adults = db.users.find({ 
+  where: { age: { $gte: 18 } },
+  sort: { name: 'asc' },
+  limit: 10 
+});
+
+// Complex conditions
+const result = db.users.find({
+  where: { 
+    $or: [
+      { name: { $regex: /^A/ } },
+      { age: { $lt: 30 } }
+    ]
+  }
+});
+
 // Get all
 const allUsers = db.users.all();
 
@@ -88,17 +105,30 @@ Creates a new table for records of type T.
 #### `insert(record: T)` → void
 Inserts a new record into the table.
 
-#### `find(query: { where: Partial<T> })` → T[] | T
-Finds records matching the query. Returns array if multiple, single if one.
+#### `find(query?: QueryOptions<T>)` → T[]
+Finds records matching the query. Supports advanced filtering, sorting, and pagination.
+
+Query options:
+- `where`: Simple equality match or complex conditions with operators
+- `sort`: Sort by fields (e.g., `{ name: 'asc', age: 'desc' }`)
+- `limit`: Maximum number of records to return
+- `offset`: Number of records to skip
+
+Where conditions support:
+- Simple equality: `{ name: 'Alice' }`
+- Comparison operators: `{ age: { $gt: 18, $lt: 65 } }`
+- Set operations: `{ status: { $in: ['active', 'pending'] } }`
+- Regex matching: `{ email: { $regex: /@example\.com$/ } }`
+- OR logic: `{ $or: [{ name: 'Alice' }, { name: 'Bob' }] }`
 
 #### `all()` → readonly T[]
 Returns all records in the table.
 
-#### `update(query: { where: Partial<T> }, update: Partial<T>)` → void
-Updates records matching the query with the given updates.
+#### `update(query: { where?: Partial<T> | WhereClause<T> }, update: Partial<T>)` → void
+Updates records matching the query with the given updates. Supports the same where conditions as `find`.
 
-#### `delete(query: { where: Partial<T> })` → void
-Deletes records matching the query.
+#### `delete(query: { where?: Partial<T> | WhereClause<T> })` → void
+Deletes records matching the query. Supports the same where conditions as `find`.
 
 #### `load(records: readonly T[])` → void
 Loads multiple records into the table.
