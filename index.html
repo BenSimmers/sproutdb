@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SproutDB - Tiny TypeScript Key-Value Store</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            padding: 60px 0;
+        }
+
+        .header h1 {
+            font-size: 3.5rem;
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.3rem;
+            opacity: 0.9;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .badge {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            margin: 10px 5px;
+        }
+
+        .content {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            margin-top: -30px;
+            position: relative;
+        }
+
+        .section {
+            padding: 60px 40px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .section:last-child {
+            border-bottom: none;
+        }
+
+        .section h2 {
+            font-size: 2.5rem;
+            margin-bottom: 30px;
+            color: #2c3e50;
+            text-align: center;
+        }
+
+        .section h3 {
+            font-size: 1.8rem;
+            margin: 40px 0 20px 0;
+            color: #34495e;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 40px;
+        }
+
+        .feature {
+            text-align: center;
+            padding: 30px;
+            border-radius: 8px;
+            background: #f8f9fa;
+            transition: transform 0.3s ease;
+        }
+
+        .feature:hover {
+            transform: translateY(-5px);
+        }
+
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 20px;
+        }
+
+        .feature h4 {
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+
+        .code-block {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+            margin: 20px 0;
+            position: relative;
+            white-space: pre-wrap;
+        }
+
+        .code-block::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #e1e5e9;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            cursor: pointer;
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .tab.active {
+            border-bottom-color: #667eea;
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .api-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        .api-table th,
+        .api-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e1e5e9;
+        }
+
+        .api-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .method-name {
+            font-family: monospace;
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .param-type {
+            font-family: monospace;
+            color: #e83e8c;
+            font-size: 0.9rem;
+        }
+
+        .install-commands {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .install-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .install-card h4 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .install-card code {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 40px;
+            color: white;
+        }
+
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2.5rem;
+            }
+
+            .section {
+                padding: 40px 20px;
+            }
+
+            .features {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>SproutDB</h1>
+            <p>A tiny, dependency-free TypeScript key-value store with pluggable persistence and advanced querying</p>
+            <div>
+                <span class="badge">TypeScript First</span>
+                <span class="badge">Zero Dependencies</span>
+                <span class="badge">REST API</span>
+                <span class="badge">Advanced Queries</span>
+            </div>
+        </header>
+
+        <main class="content">
+            <section class="section">
+                <h2>🚀 Quick Start</h2>
+
+                <div class="install-commands">
+                    <div class="install-card">
+                        <h4>Install via npm</h4>
+                        <code>npm install sproutdb</code>
+                    </div>
+                    <div class="install-card">
+                        <h4>Install via pnpm</h4>
+                        <code>pnpm add sproutdb</code>
+                    </div>
+                    <div class="install-card">
+                        <h4>Try instantly with npx</h4>
+                        <code>npx sproutdb --port 3001</code>
+                    </div>
+                </div>
+
+                <h3>As a Library</h3>
+                <div class="code-block">
+import { create, table } from 'sproutdb';
+
+const db = create({
+  users: table&lt;{ id: number; name: string; email: string }&gt;(),
+  posts: table&lt;{ id: number; title: string; content: string }&gt;(),
+});
+
+// Insert data
+db.users.insert({ id: 1, name: 'Alice', email: 'alice@example.com' });
+
+// Find with advanced queries
+const adults = db.users.find({
+  where: { age: { $gte: 18 } },
+  sort: { name: 'asc' },
+  limit: 10
+});
+
+// Complex conditions
+const result = db.users.find({
+  where: {
+    $or: [
+      { name: { $regex: /^A/ } },
+      { age: { $lt: 30 } }
+    ]
+  }
+});
+                </div>
+
+                <h3>As a Test Database Server</h3>
+                <div class="code-block">
+# Start server
+npx sproutdb --port 3001
+
+# With seed data
+npx sproutdb --seed sprout.json
+
+# API endpoints available at http://localhost:3001
+curl -X POST http://localhost:3001/tables/users/insert \
+  -H "Content-Type: application/json" \
+  -d '{"id": 1, "name": "Alice", "email": "alice@example.com"}'
+                </div>
+            </section>
+
+            <section class="section">
+                <h2>✨ Features</h2>
+
+                <div class="features">
+                    <div class="feature">
+                        <div class="feature-icon">🔍</div>
+                        <h4>Advanced Queries</h4>
+                        <p>Range queries, regex matching, OR logic, sorting, and pagination</p>
+                    </div>
+                    <div class="feature">
+                        <div class="feature-icon">⚡</div>
+                        <h4>TypeScript First</h4>
+                        <p>Full type safety with TypeScript support and type-safe queries</p>
+                    </div>
+                    <div class="feature">
+                        <div class="feature-icon">🔌</div>
+                        <h4>Pluggable Persistence</h4>
+                        <p>Extend with custom storage backends (JSON, SQLite, etc.)</p>
+                    </div>
+                    <div class="feature">
+                        <div class="feature-icon">🌐</div>
+                        <h4>REST API Server</h4>
+                        <p>Built-in HTTP server for testing and development</p>
+                    </div>
+                    <div class="feature">
+                        <div class="feature-icon">📦</div>
+                        <h4>Zero Dependencies</h4>
+                        <p>Lightweight and fast with no external dependencies</p>
+                    </div>
+                    <div class="feature">
+                        <div class="feature-icon">🌱</div>
+                        <h4>Data Seeding</h4>
+                        <p>Load initial data from JSON files or folders</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="section">
+                <h2>📚 API Reference</h2>
+
+                <h3>Database Operations</h3>
+                <table class="api-table">
+                    <thead>
+                        <tr>
+                            <th>Method</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="method-name">create(schema)</span></td>
+                            <td>Creates a new database instance with table schema</td>
+                        </tr>
+                        <tr>
+                            <td><span class="method-name">table&lt;T&gt;()</span></td>
+                            <td>Creates a new table for records of type T</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Table Methods</h3>
+                <table class="api-table">
+                    <thead>
+                        <tr>
+                            <th>Method</th>
+                            <th>Parameters</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="method-name">insert(record)</span></td>
+                            <td><span class="param-type">T</span></td>
+                            <td>Inserts a new record into the table</td>
+                        </tr>
+                        <tr>
+                            <td><span class="method-name">find(query?)</span></td>
+                            <td><span class="param-type">QueryOptions&lt;T&gt;</span></td>
+                            <td>Finds records with advanced filtering, sorting, pagination</td>
+                        </tr>
+                        <tr>
+                            <td><span class="method-name">all()</span></td>
+                            <td></td>
+                            <td>Returns all records in the table</td>
+                        </tr>
+                        <tr>
+                            <td><span class="method-name">update(query, update)</span></td>
+                            <td><span class="param-type">QueryOptions&lt;T&gt;, Partial&lt;T&gt;</span></td>
+                            <td>Updates records matching the query</td>
+                        </tr>
+                        <tr>
+                            <td><span class="method-name">delete(query)</span></td>
+                            <td><span class="param-type">QueryOptions&lt;T&gt;</span></td>
+                            <td>Deletes records matching the query</td>
+                        </tr>
+                        <tr>
+                            <td><span class="method-name">load(records)</span></td>
+                            <td><span class="param-type">T[]</span></td>
+                            <td>Loads multiple records into the table</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Query Operators</h3>
+                <div class="tabs">
+                    <button class="tab active" onclick="showTab('comparison')">Comparison</button>
+                    <button class="tab" onclick="showTab('logical')">Logical</button>
+                    <button class="tab" onclick="showTab('element')">Element</button>
+                    <button class="tab" onclick="showTab('options')">Query Options</button>
+                </div>
+
+                <div id="comparison" class="tab-content active">
+                    <table class="api-table">
+                        <thead>
+                            <tr>
+                                <th>Operator</th>
+                                <th>Description</th>
+                                <th>Example</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>$gt</code></td>
+                                <td>Greater than</td>
+                                <td><code>{ age: { $gt: 18 } }</code></td>
+                            </tr>
+                            <tr>
+                                <td><code>$gte</code></td>
+                                <td>Greater than or equal</td>
+                                <td><code>{ age: { $gte: 21 } }</code></td>
+                            </tr>
+                            <tr>
+                                <td><code>$lt</code></td>
+                                <td>Less than</td>
+                                <td><code>{ age: { $lt: 65 } }</code></td>
+                            </tr>
+                            <tr>
+                                <td><code>$lte</code></td>
+                                <td>Less than or equal</td>
+                                <td><code>{ age: { $lte: 65 } }</code></td>
+                            </tr>
+                            <tr>
+                                <td><code>$ne</code></td>
+                                <td>Not equal</td>
+                                <td><code>{ status: { $ne: 'inactive' } }</code></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div id="logical" class="tab-content">
+                    <table class="api-table">
+                        <thead>
+                            <tr>
+                                <th>Operator</th>
+                                <th>Description</th>
+                                <th>Example</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>$or</code></td>
+                                <td>Logical OR</td>
+                                <td><code>{ $or: [{ name: 'Alice' }, { age: { $lt: 30 } }] }</code></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div id="element" class="tab-content">
+                    <table class="api-table">
+                        <thead>
+                            <tr>
+                                <th>Operator</th>
+                                <th>Description</th>
+                                <th>Example</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>$in</code></td>
+                                <td>In array</td>
+                                <td><code>{ status: { $in: ['active', 'pending'] } }</code></td>
+                            </tr>
+                            <tr>
+                                <td><code>$nin</code></td>
+                                <td>Not in array</td>
+                                <td><code>{ role: { $nin: ['admin', 'moderator'] } }</code></td>
+                            </tr>
+                            <tr>
+                                <td><code>$regex</code></td>
+                                <td>Regular expression</td>
+                                <td><code>{ email: { $regex: /@example\.com$/ } }</code></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div id="options" class="tab-content">
+                    <table class="api-table">
+                        <thead>
+                            <tr>
+                                <th>Option</th>
+                                <th>Type</th>
+                                <th>Description</th>
+                                <th>Example</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>where</code></td>
+                                <td><code>Partial&lt;T&gt; | WhereClause&lt;T&gt;</code></td>
+                                <td>Query conditions</td>
+                                <td><code>{ age: { $gte: 18 } }</code></td>
+                            </tr>
+                            <tr>
+                                <td><code>sort</code></td>
+                                <td><code>SortClause&lt;T&gt;</code></td>
+                                <td>Sort specification</td>
+                                <td><code>{ name: 'asc', age: 'desc' }</code></td>
+                            </tr>
+                            <tr>
+                                <td><code>limit</code></td>
+                                <td><code>number</code></td>
+                                <td>Maximum results</td>
+                                <td><code>10</code></td>
+                            </tr>
+                            <tr>
+                                <td><code>offset</code></td>
+                                <td><code>number</code></td>
+                                <td>Skip results</td>
+                                <td><code>20</code></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="section">
+                <h2>🔧 Development</h2>
+
+                <div class="code-block">
+# Install dependencies
+pnpm install
+
+# Run tests
+pnpm test
+
+# Build the project
+pnpm build
+
+# Start development server
+pnpm dev
+                </div>
+
+                <h3>Project Structure</h3>
+                <div class="code-block">
+sproutdb/
+├── src/
+│   ├── index.ts          # Main exports
+│   ├── cli.ts           # Command line interface
+│   ├── server.ts        # HTTP server
+│   └── lib/
+│       ├── types/       # TypeScript definitions
+│       └── modules/     # Core functionality
+├── tests/               # Test files
+├── examples/            # Usage examples
+└── package.json         # Project configuration
+                </div>
+            </section>
+        </main>
+
+        <footer class="footer">
+            <p>
+                Built with ❤️ using TypeScript •
+                <a href="https://github.com/BenSimmers/sproutdb">GitHub</a> •
+                <a href="https://www.npmjs.com/package/sproutdb">npm</a> •
+                Licensed under MIT
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        function showTab(tabName) {
+            const contents = document.querySelectorAll('.tab-content');
+            contents.forEach(content => content.classList.remove('active'));
+
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            document.getElementById(tabName).classList.add('active');
+
+            event.target.classList.add('active');
+        }
+    </script>
+</body>
+</html>
