@@ -1,5 +1,11 @@
 # sproutdb
 
+## 1.1.1
+
+### Patch Changes
+
+- f216277: fix cli command
+
 ## 1.1.0
 
 ### Minor Changes

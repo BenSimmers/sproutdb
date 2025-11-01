@@ -1,6 +1,6 @@
 {
   "name": "sproutdb",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "type": "module",
   "description": "A tiny, dependency‑free TypeScript key‑value store with pluggable persistence.",
   "main": "./dist/index.js",
