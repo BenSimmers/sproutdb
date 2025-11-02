@@ -13,6 +13,8 @@ let db: Database<Record<string, Table<unknown>>> = create({
 });
 
 // Routes
+
+// Insert a record into a table
 app.post('/tables/:table/insert', (req, res) => {
   try {
     const tableName = req.params.table as keyof typeof db;
@@ -26,6 +28,7 @@ app.post('/tables/:table/insert', (req, res) => {
   }
 });
 
+// Find records in a table
 app.post('/tables/:table/find', (req, res) => {
   try {
     const tableName = req.params.table as keyof typeof db;
@@ -39,6 +42,7 @@ app.post('/tables/:table/find', (req, res) => {
   }
 });
 
+// Get all records from a table
 app.get('/tables/:table/all', (req, res) => {
   try {
     const tableName = req.params.table as keyof typeof db;
@@ -52,6 +56,7 @@ app.get('/tables/:table/all', (req, res) => {
   }
 });
 
+// Delete records from a table
 app.delete('/tables/:table/delete', (req, res) => {
   try {
     const tableName = req.params.table as keyof typeof db;
@@ -65,6 +70,7 @@ app.delete('/tables/:table/delete', (req, res) => {
   }
 });
 
+// Update records in a table
 app.put('/tables/:table/update', (req, res) => {
   try {
     const tableName = req.params.table as keyof typeof db;
@@ -79,6 +85,7 @@ app.put('/tables/:table/update', (req, res) => {
   }
 });
 
+// Load multiple records into a table
 app.post('/tables/:table/load', (req, res) => {
   try {
     const tableName = req.params.table as keyof typeof db;
@@ -92,6 +99,7 @@ app.post('/tables/:table/load', (req, res) => {
   }
 });
 
+// Create a new table
 app.post('/tables', (req, res) => {
   try {
     const { name } = req.body;
@@ -107,6 +115,17 @@ app.post('/tables', (req, res) => {
     res.status(500).json({ error: (error as Error).message });
   }
 });
+
+// get all table names
+app.get('/tables', (req, res) => {
+  try {
+    const tableNames = Object.keys(db);
+    return res.status(200).json(tableNames);
+  } catch (error) {
+    return res.status(500).json({ error: (error as Error).message });
+  }
+});
+
 
 export { app };
 
