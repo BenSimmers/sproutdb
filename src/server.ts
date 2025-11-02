@@ -92,6 +92,22 @@ app.post('/tables/:table/load', (req, res) => {
   }
 });
 
+app.post('/tables', (req, res) => {
+  try {
+    const { name } = req.body;
+    if (!name) {
+      return res.status(400).json({ error: 'Table name is required' });
+    }
+    if (db[name]) {
+      return res.status(409).json({ error: 'Table already exists' });
+    }
+    db[name] = table<unknown>();
+    res.status(201).json({ success: true, message: `Table '${name}' created` });
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
 export { app };
 
 export function start(port: number = 3000, seedData?: Record<string, unknown[]>) {

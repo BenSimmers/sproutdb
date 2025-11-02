@@ -143,6 +143,7 @@ When running the server, the following endpoints are available:
 - `PUT /tables/:table/update` - Update records
 - `DELETE /tables/:table/delete` - Delete records
 - `POST /tables/:table/load` - Load multiple records
+- `POST /tables` - Create a new table
 
 Example request:
 

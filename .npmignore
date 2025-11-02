@@ -49,3 +49,6 @@ eslint.config.js
 .prettierrc.json
 .prettierrc.yaml
 vitest.config.ts
+
+# test files
+/tests/ 

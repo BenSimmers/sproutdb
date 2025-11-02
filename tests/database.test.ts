@@ -50,8 +50,6 @@ describe("creating a database with multiple tables", () => {
         arrayOrSingle(foundUser).forEach(user => {
             expect(user.email).toBe("alice@newdomain.com");
         });
-
-
     });
 
     it("should be able to find a record in the table", () => {
