@@ -1,5 +1,11 @@
 # sproutdb
 
+## 1.1.2
+
+### Patch Changes
+
+- 4ee071a: add a create table endpoint
+
 ## 1.1.1
 
 ### Patch Changes
