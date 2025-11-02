@@ -1,5 +1,11 @@
 # sproutdb
 
+## 1.1.3
+
+### Patch Changes
+
+- 75fc357: add endpoint to get all tablenames
+
 ## 1.1.2
 
 ### Patch Changes
