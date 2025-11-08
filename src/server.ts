@@ -4,12 +4,118 @@ import { create, table } from './index.js';
 import { Database, Table } from './lib/types/index.js';
 
 const app = express();
+
+// Performance and monitoring metrics
+interface ServerMetrics {
+  requests: {
+    total: number;
+    byMethod: Record<string, number>;
+    byEndpoint: Record<string, number>;
+    errors: number;
+  };
+  performance: {
+    avgResponseTime: number;
+    totalResponseTime: number;
+  };
+  startTime: Date;
+  uptime: () => number;
+}
+
+const metrics: ServerMetrics = {
+  requests: {
+    total: 0,
+    byMethod: {},
+    byEndpoint: {},
+    errors: 0,
+  },
+  performance: {
+    avgResponseTime: 0,
+    totalResponseTime: 0,
+  },
+  startTime: new Date(),
+  uptime: () => Date.now() - metrics.startTime.getTime(),
+};
+
+// Custom logging middleware
+const requestLogger = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const start = Date.now();
+  
+  // Track request metrics
+  metrics.requests.total++;
+  metrics.requests.byMethod[req.method] = (metrics.requests.byMethod[req.method] || 0) + 1;
+  metrics.requests.byEndpoint[req.path] = (metrics.requests.byEndpoint[req.path] || 0) + 1;
+
+  // Log request
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path} - ${req.ip}`);
+
+  // Track response time and errors
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    metrics.performance.totalResponseTime += duration;
+    metrics.performance.avgResponseTime = metrics.performance.totalResponseTime / metrics.requests.total;
+
+    if (res.statusCode >= 400) {
+      metrics.requests.errors++;
+    }
+
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path} - ${res.statusCode} - ${duration}ms`);
+  });
+
+  next();
+};
+
+// Middleware
 app.use(cors());
 app.use(express.json());
+app.use(requestLogger);
 
 // Create a sample database with a users table
 let db: Database<Record<string, Table<unknown>>> = create({
   users: table<{ id: number; name: string; email: string }>(),
+});
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  try {
+    const health = {
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      uptime: metrics.uptime(),
+      version: process.env.npm_package_version || '1.0.0',
+      database: {
+        tables: Object.keys(db).length,
+        totalRecords: Object.values(db).reduce((total, table) => total + table.all().length, 0),
+      },
+    };
+    res.status(200).json(health);
+  } catch (error) {
+    res.status(503).json({
+      status: 'unhealthy',
+      timestamp: new Date().toISOString(),
+      error: (error as Error).message,
+    });
+  }
+});
+
+// Metrics endpoint
+app.get('/metrics', (req, res) => {
+  try {
+    const metricsData = {
+      ...metrics,
+      uptime: metrics.uptime(),
+      database: {
+        tables: Object.keys(db),
+        tableCount: Object.keys(db).length,
+        recordCounts: Object.fromEntries(
+          Object.entries(db).map(([name, table]) => [name, table.all().length])
+        ),
+      },
+      memory: process.memoryUsage(),
+    };
+    res.status(200).json(metricsData);
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
 });
 
 // Routes
@@ -143,6 +249,6 @@ export function start(port: number = 3000, seedData?: Record<string, unknown[]>)
     }
   }
   app.listen(port, () => {
-    console.log(`Server running on port ${port}`);
+    console.log(`Server running on port http://localhost:${port}`);
   });
 }
