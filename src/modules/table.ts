@@ -1,4 +1,5 @@
-import { Table, QueryOptions, WhereClause, FieldCondition, QueryOperators } from "../lib/types";
+import { Table, QueryOptions, WhereClause, FieldCondition, QueryOperators, ValidationError } from "../lib/types";
+import { z } from "zod";
 
 /**
  * Checks if a row matches a where clause.
@@ -78,12 +79,48 @@ function matchesField<T>(value: T, condition: FieldCondition<T>): boolean {
 
 /**
  * Creates a new table.
+ * @param schema Optional Zod schema for runtime validation
  * @returns {Table<T>} A new table instance.
  */
-export const table = <T>(): Table<T> => {
+export const table = <T>(schema?: z.ZodSchema<T>): Table<T> => {
     let data: T[] = [];
+
+    /**
+     * Validates a record against the schema if provided
+     */
+    const validateRecord = (record: T): void => {
+        if (!schema) return;
+
+        const result = schema.safeParse(record);
+        if (!result.success) {
+            throw new ValidationError(
+                `Validation failed: ${result.error.issues.map((i: { message: string }) => i.message).join(', ')}`,
+                result.error.issues
+            );
+        }
+    };
+
+    const validatePartialRecord = (partialRecord: Partial<T>): void => {
+        if (!schema) return;
+
+        // Only validate if schema is a ZodObject (has partial method)
+        if ('partial' in schema && typeof schema.partial === 'function') {
+            const partialSchema = schema.partial();
+            const result = partialSchema.safeParse(partialRecord);
+            if (!result.success) {
+                throw new ValidationError(
+                    `Validation failed: ${result.error.issues.map((i: { message: string }) => i.message).join(', ')}`,
+                    result.error.issues
+                );
+            }
+        }
+    };
+
     return {
-        insert(record: T) { data.push(record); },
+        insert(record: T) {
+            validateRecord(record);
+            data.push(record);
+        },
         find(query?: QueryOptions<T>) {
             let results = [...data];
 
@@ -131,6 +168,7 @@ export const table = <T>(): Table<T> => {
             data = data.filter(row => !matchesWhere(row, query.where!));
         },
         update(query: { where?: Partial<T> | WhereClause<T> }, update: Partial<T>) {
+            validatePartialRecord(update);
             if (!query.where) {
                 data = data.map(row => ({ ...row, ...update }));
                 return;
@@ -142,6 +180,9 @@ export const table = <T>(): Table<T> => {
                 return row;
             });
         },
-        load(records: readonly T[]) { data = [...data, ...records]; },
+        load(records: readonly T[]) {
+            records.forEach(record => validateRecord(record));
+            data = [...data, ...records];
+        },
     };
 };

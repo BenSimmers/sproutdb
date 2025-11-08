@@ -96,4 +96,14 @@ type Database<TTables extends Record<string, Table<unknown>>> = { [K in keyof TT
  */
 type TableRecord = Record<string, Table<unknown>>;
 
-export { Table, TableRecord, Database, QueryOptions, WhereClause, SortClause, SortDirection, FieldCondition, QueryOperators };
+/**
+ * Validation error for schema validation.
+ */
+class ValidationError extends Error {
+    constructor(message: string, public issues: unknown[]) {
+        super(message);
+        this.name = 'ValidationError';
+    }
+}
+
+export { Table, TableRecord, Database, QueryOptions, WhereClause, SortClause, SortDirection, FieldCondition, QueryOperators, ValidationError };

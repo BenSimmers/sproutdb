@@ -83,8 +83,14 @@ describe('Server API Endpoints', () => {
     });
 
     it('should delete a record from a table', async () => {
-        const newUser = { id: 1, name: 'Jane Doe' };
-        await request(app).post('/tables/test_users/insert').send(newUser);
+        const newUsers = [
+            { id: 1, name: 'Jane Doe' },
+            { id: 2, name: 'John Smith' },
+        ]
+        // await request(app).post('/tables/test_users/insert').send(newUser);
+        for (const user of newUsers) {
+            await request(app).post('/tables/test_users/insert').send(user);
+        }
 
         const response = await request(app)
             .delete('/tables/test_users/delete')
@@ -94,7 +100,8 @@ describe('Server API Endpoints', () => {
         expect(response.body.success).toBe(true);
 
         const found = await request(app).get('/tables/test_users/all');
-        expect(found.body).toHaveLength(0);
+        expect(found.body).toHaveLength(1);
+        expect(found.body[0]).toEqual({ id: 2, name: 'John Smith' });
     });
 
 
