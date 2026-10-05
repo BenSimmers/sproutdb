@@ -2,10 +2,46 @@
   "name": "sproutdb",
   "version": "1.2.0",
   "type": "module",
-  "description": "A tiny, dependency‑free TypeScript key‑value store with pluggable persistence.",
-  "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
+  "description": "A tiny TypeScript in-memory database with queries, validation, persistence adapters and a mock REST server.",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./server": {
+      "import": {
+        "types": "./dist/server.d.ts",
+        "default": "./dist/server.js"
+      },
+      "require": {
+        "types": "./dist/server.d.cts",
+        "default": "./dist/server.cjs"
+      }
+    },
+    "./node": {
+      "import": {
+        "types": "./dist/node.d.ts",
+        "default": "./dist/node.js"
+      },
+      "require": {
+        "types": "./dist/node.d.cts",
+        "default": "./dist/node.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
   "bin": {
     "sproutdb": "./dist/cli.js"
   },
@@ -14,12 +50,12 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsup src/index.ts src/cli.ts --format cjs,esm --dts",
+    "build": "tsup",
     "changeset": "changesets version",
     "release": "npm run build && changeset publish",
     "lint": "eslint . --ext .ts,.tsx",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
-    "start": "tsx src/server.ts",
+    "start": "tsx src/cli.ts",
     "test": "vitest",
     "test:watch": "vitest --watch",
     "test:coverage": "vitest --coverage",
@@ -35,6 +71,7 @@
   "devDependencies": {
     "@changesets/cli": "^2.29.5",
     "@eslint/js": "^9.30.0",
+    "@types/cors": "^2.8.19",
     "@types/node": "^24.0.8",
     "@types/supertest": "^6.0.3",
     "@vitest/coverage-v8": "^1.6.0",
@@ -47,15 +84,12 @@
     "tsx": "^4.20.6",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.35.1",
-    "vitest": "^1.6.0"
+    "vitest": "^1.6.0",
+    "zod": "^4.1.12"
   },
   "dependencies": {
-    "@types/cors": "^2.8.19",
-    "@types/morgan": "^1.9.10",
     "commander": "^14.0.1",
     "cors": "^2.8.5",
-    "express": "^5.1.0",
-    "morgan": "^1.10.1",
-    "zod": "^4.1.12"
+    "express": "^5.1.0"
   }
 }

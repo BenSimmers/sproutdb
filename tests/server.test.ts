@@ -1,14 +1,14 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
-import { app } from '../src/server';
+import type { Express } from 'express';
+import { createServer } from '../src/server';
 
 describe('Server API Endpoints', () => {
-    // Reset the database state before each test
+    let app: Express;
+
     beforeEach(async () => {
-        // This is a simple way to reset the in-memory DB for tests.
+        ({ app } = createServer());
         await request(app).post('/tables').send({ name: 'test_users' });
-        await request(app).delete('/tables/test_users/delete').send({}); // Clear the table
-        await request(app).post('/reset'); // Custom endpoint to reset DB
     });
 
     it('should create a new table', async () => {
@@ -24,10 +24,10 @@ describe('Server API Endpoints', () => {
     });
 
     it('should return 409 if a table already exists', async () => {
-        await request(app).post('/tables').send({ name: 'products' }); // Create it once
+        await request(app).post('/tables').send({ name: 'products' });
         const response = await request(app)
             .post('/tables')
-            .send({ name: 'products' }); // Try to create it again
+            .send({ name: 'products' });
 
         expect(response.status).toBe(409);
         expect(response.body.error).toBe('Table already exists');
@@ -87,7 +87,6 @@ describe('Server API Endpoints', () => {
             { id: 1, name: 'Jane Doe' },
             { id: 2, name: 'John Smith' },
         ]
-        // await request(app).post('/tables/test_users/insert').send(newUser);
         for (const user of newUsers) {
             await request(app).post('/tables/test_users/insert').send(user);
         }
@@ -112,5 +111,58 @@ describe('Server API Endpoints', () => {
 
         expect(response.status).toBe(200);
         expect(response.body.sort()).toEqual(['test_users', 'products', 'users'].sort());
+    });
+
+    it('should only update records matching the where clause', async () => {
+        await request(app).post('/tables/test_users/load').send({
+            records: [{ id: 1, name: 'Jane Doe' }, { id: 2, name: 'John Smith' }],
+        });
+
+        await request(app)
+            .put('/tables/test_users/update')
+            .send({ where: { id: 1 }, update: { name: 'Jane Smith' } });
+
+        const all = await request(app).get('/tables/test_users/all');
+        expect(all.body).toEqual([
+            { id: 1, name: 'Jane Smith' },
+            { id: 2, name: 'John Smith' },
+        ]);
+    });
+
+    it('should return 400 for update without where/update objects', async () => {
+        const response = await request(app).put('/tables/test_users/update').send({ update: { name: 'x' } });
+        expect(response.status).toBe(400);
+    });
+
+    it('should return 400 for delete without a where clause instead of wiping the table', async () => {
+        await request(app).post('/tables/test_users/insert').send({ id: 1 });
+
+        const empty = await request(app).delete('/tables/test_users/delete').send({});
+        expect(empty.status).toBe(400);
+        const noBody = await request(app).delete('/tables/test_users/delete');
+        expect(noBody.status).toBe(400);
+
+        const all = await request(app).get('/tables/test_users/all');
+        expect(all.body).toHaveLength(1);
+    });
+
+    it('should return 400 for load without a records array', async () => {
+        const response = await request(app).post('/tables/test_users/load').send({});
+        expect(response.status).toBe(400);
+    });
+
+    it('should return 404 for table names that exist on Object.prototype', async () => {
+        for (const name of ['constructor', 'toString', 'hasOwnProperty']) {
+            const response = await request(app).get(`/tables/${name}/all`);
+            expect(response.status).toBe(404);
+        }
+    });
+
+    it('should allow creating a table named like an Object.prototype key', async () => {
+        const response = await request(app).post('/tables').send({ name: 'constructor' });
+        expect(response.status).toBe(201);
+        await request(app).post('/tables/constructor/insert').send({ id: 1 });
+        const all = await request(app).get('/tables/constructor/all');
+        expect(all.body).toEqual([{ id: 1 }]);
     });
 });

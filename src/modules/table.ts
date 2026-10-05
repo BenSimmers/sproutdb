@@ -1,188 +1,198 @@
-import { Table, QueryOptions, WhereClause, FieldCondition, QueryOperators, ValidationError } from "../lib/types";
-import { z } from "zod";
+import {
+    Table,
+    TableOptions,
+    Schema,
+    ChangeEvent,
+    QueryOptions,
+    WhereQuery,
+    ValidationError,
+    DuplicateKeyError,
+} from "../lib/types";
+import { clone, compareBy, deepEqual, matchesWhere } from "../lib/query";
 
-/**
- * Checks if a row matches a where clause.
- */
-function matchesWhere<T>(row: T, where: Partial<T> | WhereClause<T>): boolean {
-    // Handle simple partial match (backward compatibility)
-    if (!('$or' in where)) {
-        const simpleWhere = where as Partial<T>;
-        return Object.entries(simpleWhere).every(([key, value]) => {
-            return matchesField(row[key as keyof T], value);
-        });
-    }
-
-    // Handle complex where clause
-    const complexWhere = where as WhereClause<T>;
-
-    // Check $or conditions
-    if (complexWhere.$or) {
-        return complexWhere.$or.some(orCondition => matchesWhere(row, orCondition));
-    }
-
-    // Check field conditions
-    for (const [key, condition] of Object.entries(complexWhere)) {
-        if (key === '$or') continue;
-        if (!matchesField(row[key as keyof T], condition as FieldCondition<T[keyof T]>)) {
-            return false;
-        }
-    }
-
-    return true;
-}
-
-/**
- * Checks if a field value matches a condition.
- */
-function matchesField<T>(value: T, condition: FieldCondition<T>): boolean {
-    // Simple equality
-    if (typeof condition !== 'object' || condition === null) {
-        return value === condition;
-    }
-
-    // Operator conditions
-    const ops = condition as QueryOperators<T>;
-    if (ops.$gt != null) {
-        if (!(value > ops.$gt)) return false;
-    }
-    if (ops.$gte != null) {
-        if (!(value >= ops.$gte)) return false;
-    }
-    if (ops.$lt != null) {
-        if (!(value < ops.$lt)) return false;
-    }
-    if (ops.$lte != null) {
-        if (!(value <= ops.$lte)) return false;
-    }
-    if (ops.$ne != null) {
-        if (!(value !== ops.$ne)) return false;
-    }
-    if (ops.$in != null) {
-        if (!ops.$in.includes(value)) return false;
-    }
-    if (ops.$nin != null) {
-        if (ops.$nin.includes(value)) return false;
-    }
-    if (ops.$regex != null) {
-        const regex = ops.$regex instanceof RegExp ? ops.$regex : new RegExp(ops.$regex);
-        if (!regex.test(String(value))) return false;
-    }
-
-    // If no operators matched, treat as equality
-    if (Object.keys(condition).length === 0) {
-        return value === condition;
-    }
-
-    return true;
-}
+const isSchema = <T>(value: unknown): value is Schema<T> =>
+    typeof value === 'object' && value !== null && typeof (value as Schema<T>).safeParse === 'function';
 
 /**
  * Creates a new table.
- * @param schema Optional Zod schema for runtime validation
+ * @param schemaOrOptions A validator with a `safeParse` method (e.g. a Zod schema), or table options.
  * @returns {Table<T>} A new table instance.
  */
-export const table = <T>(schema?: z.ZodSchema<T>): Table<T> => {
-    let data: T[] = [];
+export const table = <T>(schemaOrOptions?: Schema<T> | TableOptions<T>): Table<T> => {
+    const options: TableOptions<T> = isSchema<T>(schemaOrOptions) ? { schema: schemaOrOptions } : schemaOrOptions ?? {};
+    const { schema, key } = options;
 
-    /**
-     * Validates a record against the schema if provided
-     */
+    let data: T[] = [];
+    const listeners = new Set<(event: ChangeEvent<T>) => void>();
+
+    const emit = (event: ChangeEvent<T>) => {
+        if (listeners.size === 0) return;
+        const copy = { ...event, records: event.records.map(clone) };
+        listeners.forEach(listener => listener(copy));
+    };
+
     const validateRecord = (record: T): void => {
         if (!schema) return;
 
         const result = schema.safeParse(record);
         if (!result.success) {
             throw new ValidationError(
-                `Validation failed: ${result.error.issues.map((i: { message: string }) => i.message).join(', ')}`,
-                result.error.issues
+                `Validation failed: ${result.error.issues.map(i => i.message).join(', ')}`,
+                [...result.error.issues]
             );
         }
     };
 
-    const validatePartialRecord = (partialRecord: Partial<T>): void => {
-        if (!schema) return;
+    const keyOf = (record: T) => (key === undefined ? undefined : record[key]);
 
-        // Only validate if schema is a ZodObject (has partial method)
-        if ('partial' in schema && typeof schema.partial === 'function') {
-            const partialSchema = schema.partial();
-            const result = partialSchema.safeParse(partialRecord);
-            if (!result.success) {
-                throw new ValidationError(
-                    `Validation failed: ${result.error.issues.map((i: { message: string }) => i.message).join(', ')}`,
-                    result.error.issues
-                );
+    const checkKeys = (records: readonly T[], existing: readonly T[]): void => {
+        if (key === undefined) return;
+        const seen = existing.map(keyOf);
+        for (const record of records) {
+            const value = keyOf(record);
+            if (value === undefined || value === null) {
+                throw new ValidationError(`Missing key field "${String(key)}"`, []);
             }
+            if (seen.some(other => deepEqual(other, value))) {
+                throw new DuplicateKeyError(key, value);
+            }
+            seen.push(value);
         }
     };
 
+    const requireKey = (method: string): keyof T => {
+        if (key === undefined) {
+            throw new Error(`table.${method}() requires the "key" table option`);
+        }
+        return key;
+    };
+
+    const filter = (where: WhereQuery<T>['where']) => (where ? data.filter(row => matchesWhere(row, where)) : data);
+
+    const runQuery = (query?: QueryOptions<T>): T[] => {
+        let results = filter(query?.where);
+
+        if (query?.sort) {
+            results = [...results].sort(compareBy(query.sort));
+        }
+        if (query?.offset !== undefined) {
+            results = results.slice(query.offset);
+        }
+        if (query?.limit !== undefined) {
+            results = results.slice(0, query.limit);
+        }
+        return results;
+    };
+
+    const project = (row: T, select?: readonly (keyof T)[]) => {
+        if (!select) return clone(row);
+        return Object.fromEntries(select.filter(field => field in (row as object)).map(field => [field, clone(row[field])]));
+    };
+
+    const insert = (record: T): T => {
+        validateRecord(record);
+        checkKeys([record], data);
+        const stored = clone(record);
+        data = [...data, stored];
+        emit({ type: 'insert', records: [stored] });
+        return clone(stored);
+    };
+
     return {
-        insert(record: T) {
+        key,
+
+        insert,
+
+        find(query?: QueryOptions<T> & { select?: readonly (keyof T)[] }) {
+            return runQuery(query).map(row => project(row, query?.select)) as T[];
+        },
+
+        findOne(query?: QueryOptions<T>) {
+            const [row] = runQuery({ ...query, limit: 1 });
+            return row === undefined ? undefined : clone(row);
+        },
+
+        count(query?: WhereQuery<T>) {
+            return filter(query?.where).length;
+        },
+
+        get(value: T[keyof T]) {
+            const field = requireKey('get');
+            const row = data.find(row => deepEqual(row[field], value));
+            return row === undefined ? undefined : clone(row);
+        },
+
+        upsert(record: T) {
+            const field = requireKey('upsert');
             validateRecord(record);
-            data.push(record);
-        },
-        find(query?: QueryOptions<T>) {
-            let results = [...data];
-
-            // Apply where filtering
-            if (query?.where) {
-                results = results.filter(row => matchesWhere(row, query.where!));
+            const index = data.findIndex(row => deepEqual(row[field], record[field]));
+            if (index === -1) {
+                return insert(record);
             }
-
-            // Apply sorting
-            if (query?.sort) {
-                results.sort((a, b) => {
-                    for (const [field, direction] of Object.entries(query.sort!)) {
-                        const aVal = a[field as keyof T];
-                        const bVal = b[field as keyof T];
-                        let cmp = 0;
-                        if (aVal < bVal) cmp = -1;
-                        else if (aVal > bVal) cmp = 1;
-                        if (cmp !== 0) {
-                            return direction === 'desc' ? -cmp : cmp;
-                        }
-                    }
-                    return 0;
-                });
-            }
-
-            // Apply offset
-            if (query?.offset) {
-                results = results.slice(query.offset);
-            }
-
-            // Apply limit
-            if (query?.limit) {
-                results = results.slice(0, query.limit);
-            }
-
-            return results;
+            const stored = clone(record);
+            data = data.map((row, i) => (i === index ? stored : row));
+            emit({ type: 'update', records: [stored] });
+            return clone(stored);
         },
 
-        all() { return data as readonly T[]; },
-        delete(query: { where?: Partial<T> | WhereClause<T> }) {
-            if (!query.where) {
-                data = [];
-                return;
-            }
-            data = data.filter(row => !matchesWhere(row, query.where!));
+        all() { return data.map(clone) as readonly T[]; },
+
+        delete(query: WhereQuery<T>) {
+            const removed = filter(query.where);
+            if (removed.length === 0) return 0;
+            const removedSet = new Set(removed);
+            data = data.filter(row => !removedSet.has(row));
+            emit({ type: 'delete', records: removed });
+            return removed.length;
         },
-        update(query: { where?: Partial<T> | WhereClause<T> }, update: Partial<T>) {
-            validatePartialRecord(update);
-            if (!query.where) {
-                data = data.map(row => ({ ...row, ...update }));
-                return;
-            }
-            data = data.map(row => {
-                if (matchesWhere(row, query.where!)) {
-                    return { ...row, ...update };
-                }
-                return row;
+
+        update(query: WhereQuery<T>, update: Partial<T>) {
+            const targets = new Set(filter(query.where));
+            if (targets.size === 0) return 0;
+
+            // Build and validate every updated row before changing anything, so a failure leaves the table untouched.
+            const updated: T[] = [];
+            const next = data.map(row => {
+                if (!targets.has(row)) return row;
+                const merged = { ...row, ...clone(update) };
+                validateRecord(merged);
+                updated.push(merged);
+                return merged;
             });
+            if (key !== undefined && key in (update as object)) {
+                checkKeys(next, []);
+            }
+
+            data = next;
+            emit({ type: 'update', records: updated });
+            return updated.length;
         },
+
         load(records: readonly T[]) {
             records.forEach(record => validateRecord(record));
-            data = [...data, ...records];
+            checkKeys(records, data);
+            const stored = records.map(clone);
+            data = [...data, ...stored];
+            if (stored.length > 0) emit({ type: 'insert', records: stored });
+            return stored.length;
         },
-    };
+
+        clear() {
+            if (data.length === 0) return;
+            data = [];
+            emit({ type: 'replace', records: [] });
+        },
+
+        restore(records: readonly T[]) {
+            records.forEach(record => validateRecord(record));
+            checkKeys(records, []);
+            data = records.map(clone);
+            emit({ type: 'replace', records: data });
+        },
+
+        subscribe(listener: (event: ChangeEvent<T>) => void) {
+            listeners.add(listener);
+            return () => { listeners.delete(listener); };
+        },
+    } as Table<T>;
 };

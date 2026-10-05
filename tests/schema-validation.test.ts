@@ -36,10 +36,10 @@ describe("Schema Validation", () => {
         const users = table(userSchema);
 
         const invalidUser = {
-            id: -1, // Invalid: negative ID
-            name: "", // Invalid: empty name
-            email: "not-an-email", // Invalid: not a valid email
-            age: 200, // Invalid: age too high
+            id: -1,
+            name: "",
+            email: "not-an-email",
+            age: 200,
         };
 
         expect(() => users.insert(invalidUser)).toThrow(ValidationError);
@@ -60,7 +60,6 @@ describe("Schema Validation", () => {
             email: "john@example.com",
         });
 
-        // Valid update - partial validation is currently simplified
         expect(() => 
             users.update({ where: { id: 1 } }, { email: "newemail@example.com" })
         ).not.toThrow();
@@ -82,7 +81,7 @@ describe("Schema Validation", () => {
 
         const invalidUsers = [
             { id: 1, name: "John", email: "john@example.com" },
-            { id: -2, name: "", email: "not-email" }, // Invalid
+            { id: -2, name: "", email: "not-email" },
         ];
 
         expect(() => users.load(validUsers)).not.toThrow();
@@ -92,8 +91,6 @@ describe("Schema Validation", () => {
     it("should work without schema (backward compatibility)", () => {
         const users = table<{ id: number; name: string }>();
         expect(() =>
-
-            // allowing for an any type insertion as we are testing no schema case
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             users.insert({ id: "invalid" as any, name: 123 as any })
         ).not.toThrow();
@@ -120,5 +117,11 @@ describe("Schema Validation", () => {
             expect((error as ValidationError).message).toContain("Name is required");
             expect((error as ValidationError).message).toContain("Must be a valid email");
         }
+    });
+});
+describe("public exports", () => {
+    it("exports ValidationError from the package entry point", async () => {
+        const entry = await import("../src");
+        expect(entry.ValidationError).toBe(ValidationError);
     });
 });

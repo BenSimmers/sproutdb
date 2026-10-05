@@ -1,631 +1,1615 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SproutDB - Tiny TypeScript Key-Value Store</title>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SproutDB — a tiny TypeScript database</title>
+    <meta
+      name="description"
+      content="A tiny, dependency-free TypeScript in-memory database with Mongo-style queries, validation, persistence adapters, and a mock REST server with a live dashboard."
+    />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><path d='M16 30V15' stroke='%2322a06b' stroke-width='3' stroke-linecap='round'/><path d='M16 16C16 9 11 5 4 5c0 7 5 11 12 11Z' fill='%2322a06b'/><path d='M16 13c0-5 4-9 11-9 0 6-4 9-11 9Z' fill='%2334c17f'/></svg>"
+    />
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+      :root {
+        --bg: #fbfcfa;
+        --bg-tint: #f2f6f1;
+        --surface: #ffffff;
+        --border: #e3e7e0;
+        --text: #18201b;
+        --muted: #5f6b63;
+        --faint: #8a948d;
+        --accent: #1f8f5f;
+        --accent-strong: #177a50;
+        --accent-soft: #e3f3ea;
+        --accent-text: #ffffff;
+
+        --code-bg: #10160f;
+        --code-border: #243024;
+        --code-text: #dfe8e0;
+        --code-muted: #7d8b80;
+        --tok-keyword: #7fd4a8;
+        --tok-string: #f0c987;
+        --tok-number: #f5a97f;
+        --tok-fn: #9ecbff;
+        --tok-prop: #c9b8ff;
+
+        --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+        --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+        --radius: 12px;
+        --max: 1120px;
+        color-scheme: light;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0e1210;
+          --bg-tint: #131915;
+          --surface: #161c18;
+          --border: #26302a;
+          --text: #e6ebe7;
+          --muted: #9aa59d;
+          --faint: #6f7a72;
+          --accent: #3ec486;
+          --accent-strong: #5cd49b;
+          --accent-soft: #183022;
+          --accent-text: #0b1a11;
+          --code-bg: #0a0e0b;
+          --code-border: #1f2922;
+          color-scheme: dark;
+        }
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font: 16px/1.6 var(--sans);
+        -webkit-font-smoothing: antialiased;
+      }
+
+      a {
+        color: inherit;
+      }
+
+      code,
+      pre {
+        font-family: var(--mono);
+      }
+
+      :focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+        border-radius: 4px;
+      }
+
+      .wrap {
+        max-width: var(--max);
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+
+      @media (max-width: 600px) {
+        .wrap {
+          padding: 0 16px;
+        }
+      }
+
+      /* Nav */
+      nav {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: color-mix(in srgb, var(--bg) 85%, transparent);
+        backdrop-filter: saturate(1.4) blur(10px);
+        border-bottom: 1px solid var(--border);
+      }
+
+      nav .wrap {
+        display: flex;
+        align-items: center;
+        gap: 28px;
+        height: 60px;
+      }
+
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 700;
+        font-size: 17px;
+        text-decoration: none;
+        letter-spacing: -0.01em;
+      }
+
+      .logo svg {
+        width: 24px;
+        height: 24px;
+      }
+
+      .nav-links {
+        display: flex;
+        gap: 22px;
+        margin-left: auto;
+        font-size: 14.5px;
+      }
+
+      .nav-links a {
+        color: var(--muted);
+        text-decoration: none;
+      }
+
+      .nav-links a:hover {
+        color: var(--text);
+      }
+
+      @media (max-width: 720px) {
+        .nav-links .optional {
+          display: none;
+        }
+      }
+
+      /* Buttons */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 18px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        color: var(--text);
+        font: 600 15px var(--sans);
+        text-decoration: none;
+        cursor: pointer;
+      }
+
+      .btn:hover {
+        border-color: var(--faint);
+      }
+
+      .btn.primary {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: var(--accent-text);
+      }
+
+      .btn.primary:hover {
+        background: var(--accent-strong);
+        border-color: var(--accent-strong);
+      }
+
+      .btn svg {
+        width: 18px;
+        height: 18px;
+      }
+
+      /* Hero */
+      .hero {
+        padding: 88px 0 72px;
+        background: radial-gradient(1200px 400px at 70% -10%, var(--accent-soft), transparent 70%);
+      }
+
+      .hero .wrap {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+        gap: 56px;
+        align-items: center;
+      }
+
+      @media (max-width: 960px) {
+        .hero {
+          padding: 56px 0 48px;
         }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
+        .hero .wrap {
+          grid-template-columns: minmax(0, 1fr);
+          gap: 40px;
+        }
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 12px 4px 6px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: var(--surface);
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .eyebrow b {
+        background: var(--accent-soft);
+        color: var(--accent);
+        padding: 1px 8px;
+        border-radius: 999px;
+        font-weight: 600;
+      }
+
+      h1 {
+        font-size: clamp(38px, 5.4vw, 58px);
+        line-height: 1.05;
+        letter-spacing: -0.035em;
+        margin: 20px 0 18px;
+        font-weight: 750;
+      }
+
+      h1 em {
+        font-style: normal;
+        color: var(--accent);
+      }
+
+      .lede {
+        font-size: 18.5px;
+        color: var(--muted);
+        margin: 0 0 30px;
+        max-width: 34em;
+      }
+
+      .cta {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 26px;
+      }
+
+      .install {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        max-width: 100%;
+        padding: 8px 8px 8px 16px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--surface);
+        font: 14.5px var(--mono);
+      }
+
+      .install .prompt {
+        color: var(--faint);
+        user-select: none;
+      }
+
+      .install code {
+        overflow-x: auto;
+        white-space: nowrap;
+      }
+
+      .copy {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        flex: none;
+        border: 0;
+        border-radius: 7px;
+        background: transparent;
+        color: var(--muted);
+        cursor: pointer;
+      }
+
+      .copy:hover {
+        background: var(--bg-tint);
+        color: var(--text);
+      }
+
+      .copy svg {
+        width: 16px;
+        height: 16px;
+      }
+
+      .copy .done {
+        display: none;
+        color: var(--accent);
+      }
+
+      .copy.copied .idle {
+        display: none;
+      }
+
+      .copy.copied .done {
+        display: block;
+      }
+
+      /* Code window */
+      .window {
+        background: var(--code-bg);
+        border: 1px solid var(--code-border);
+        border-radius: var(--radius);
+        box-shadow: 0 24px 60px -20px rgb(0 0 0 / 0.35);
+        overflow: hidden;
+        color: var(--code-text);
+      }
+
+      .tabs {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--code-border);
+        overflow-x: auto;
+      }
+
+      .dots {
+        display: flex;
+        gap: 6px;
+        margin-right: 10px;
+        flex: none;
+      }
+
+      .dots i {
+        width: 11px;
+        height: 11px;
+        border-radius: 50%;
+        background: #2c382f;
+      }
+
+      .tab {
+        border: 0;
+        background: none;
+        color: var(--code-muted);
+        font: 500 13px var(--sans);
+        padding: 6px 12px;
+        border-radius: 7px;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+
+      .tab:hover {
+        color: var(--code-text);
+      }
+
+      .tab[aria-selected="true"] {
+        background: #1d271f;
+        color: var(--code-text);
+      }
+
+      pre {
+        margin: 0;
+        padding: 20px 22px;
+        font-size: 13.5px;
+        line-height: 1.7;
+        overflow-x: auto;
+        tab-size: 2;
+      }
+
+      .k {
+        color: var(--tok-keyword);
+      }
+
+      .s {
+        color: var(--tok-string);
+      }
+
+      .n {
+        color: var(--tok-number);
+      }
+
+      .f {
+        color: var(--tok-fn);
+      }
+
+      .p {
+        color: var(--tok-prop);
+      }
+
+      .c {
+        color: var(--code-muted);
+      }
+
+      /* Sections */
+      section {
+        padding: 88px 0;
+      }
+
+      @media (max-width: 600px) {
+        section {
+          padding: 64px 0;
+        }
+      }
+
+      section.tint {
+        background: var(--bg-tint);
+        border-block: 1px solid var(--border);
+      }
+
+      .section-head {
+        max-width: 640px;
+        margin-bottom: 44px;
+      }
+
+      .kicker {
+        color: var(--accent);
+        font-weight: 650;
+        font-size: 13.5px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      h2 {
+        font-size: clamp(28px, 3.4vw, 38px);
+        line-height: 1.15;
+        letter-spacing: -0.025em;
+        margin: 8px 0 12px;
+      }
+
+      .section-head p {
+        color: var(--muted);
+        font-size: 17px;
+        margin: 0;
+      }
+
+      h3 {
+        font-size: 17px;
+        margin: 0 0 6px;
+        letter-spacing: -0.01em;
+      }
+
+      /* Features */
+      .features {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 1px;
+        background: var(--border);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        overflow: hidden;
+      }
+
+      .feature {
+        background: var(--surface);
+        padding: 26px 24px;
+      }
+
+      .feature p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 15px;
+      }
+
+      .icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 9px;
+        display: grid;
+        place-items: center;
+        margin-bottom: 14px;
+        background: var(--accent-soft);
+        color: var(--accent);
+      }
+
+      .icon svg {
+        width: 19px;
+        height: 19px;
+      }
+
+      /* Modes */
+      .modes {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 20px;
+      }
+
+      @media (max-width: 1080px) {
+        .modes {
+          grid-template-columns: minmax(0, 1fr);
+        }
+      }
+
+      .mode {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      .mode > p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 15px;
+      }
+
+      .mode .window {
+        box-shadow: none;
+        flex: 1;
+      }
+
+      .mode pre {
+        font-size: 12px;
+        padding: 16px 18px;
+      }
+
+      .step {
+        display: inline-grid;
+        place-items: center;
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        background: var(--text);
+        color: var(--bg);
+        font: 700 13px var(--sans);
+        margin-right: 8px;
+        vertical-align: 2px;
+      }
+
+      /* Dashboard preview */
+      .preview {
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--surface);
+        overflow: hidden;
+        box-shadow: 0 24px 60px -30px rgb(0 0 0 / 0.3);
+      }
+
+      .preview-bar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 14px;
+        border-bottom: 1px solid var(--border);
+        background: var(--bg-tint);
+      }
+
+      .preview-bar .dots i {
+        background: var(--border);
+      }
+
+      .url {
+        flex: 1;
+        max-width: 420px;
+        margin: 0 auto;
+        padding: 4px 12px;
+        border-radius: 7px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        color: var(--muted);
+        font: 12.5px var(--mono);
+        text-align: center;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+      }
+
+      .preview-body {
+        display: grid;
+        grid-template-columns: 180px minmax(0, 1fr);
+        min-height: 300px;
+      }
+
+      @media (max-width: 700px) {
+        .preview-body {
+          grid-template-columns: minmax(0, 1fr);
         }
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
+        .preview-side {
+          display: none;
+        }
+      }
+
+      .preview-side {
+        border-right: 1px solid var(--border);
+        padding: 16px 10px;
+        font-size: 14px;
+      }
+
+      .preview-side .label {
+        font-size: 11px;
+        font-weight: 650;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--faint);
+        padding: 0 10px 8px;
+      }
+
+      .preview-side div.t {
+        display: flex;
+        justify-content: space-between;
+        padding: 6px 10px;
+        border-radius: 7px;
+      }
+
+      .preview-side div.t span {
+        color: var(--faint);
+        font-size: 12.5px;
+      }
+
+      .preview-side div.t.on {
+        background: var(--accent-soft);
+        color: var(--accent);
+        font-weight: 600;
+      }
+
+      .preview-main {
+        padding: 18px 20px;
+        min-width: 0;
+      }
+
+      .preview-head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 14px;
+        flex-wrap: wrap;
+      }
+
+      .preview-head strong {
+        font-size: 16px;
+      }
+
+      .live {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12.5px;
+        color: var(--muted);
+      }
+
+      .live i {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--accent);
+        box-shadow: 0 0 0 3px var(--accent-soft);
+      }
+
+      .fake-btn {
+        margin-left: auto;
+        padding: 5px 12px;
+        border-radius: 8px;
+        background: var(--accent);
+        color: var(--accent-text);
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      .fake-filter {
+        padding: 7px 12px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font: 12.5px var(--mono);
+        color: var(--muted);
+        margin-bottom: 12px;
+        background: var(--bg);
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+      }
+
+      .preview table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13.5px;
+      }
+
+      .preview th,
+      .preview td {
+        text-align: left;
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--border);
+        white-space: nowrap;
+      }
+
+      .preview th {
+        color: var(--muted);
+        font-weight: 600;
+        font-size: 12.5px;
+      }
+
+      .preview td.num {
+        font-variant-numeric: tabular-nums;
+      }
+
+      .preview tr.new td {
+        background: var(--accent-soft);
+      }
+
+      .preview-wrap {
+        overflow-x: auto;
+      }
+
+      .split {
+        display: grid;
+        grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+        gap: 56px;
+        align-items: center;
+      }
+
+      @media (max-width: 960px) {
+        .split {
+          grid-template-columns: minmax(0, 1fr);
+          gap: 36px;
+        }
+      }
+
+      .checks {
+        list-style: none;
+        padding: 0;
+        margin: 24px 0 0;
+        display: grid;
+        gap: 10px;
+      }
+
+      .checks li {
+        display: flex;
+        gap: 10px;
+        color: var(--muted);
+        font-size: 15.5px;
+      }
+
+      .checks svg {
+        flex: none;
+        width: 20px;
+        height: 20px;
+        color: var(--accent);
+        margin-top: 2px;
+      }
+
+      .checks b {
+        color: var(--text);
+        font-weight: 600;
+      }
+
+      /* Reference tables */
+      .ref-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 24px;
+      }
+
+      @media (max-width: 900px) {
+        .ref-grid {
+          grid-template-columns: minmax(0, 1fr);
+        }
+      }
+
+      .ref {
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--surface);
+        overflow: hidden;
+      }
+
+      .ref h3 {
+        padding: 16px 20px;
+        margin: 0;
+        border-bottom: 1px solid var(--border);
+        font-size: 15px;
+      }
+
+      .ref table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+
+      .ref td {
+        padding: 9px 20px;
+        border-bottom: 1px solid var(--border);
+        vertical-align: top;
+      }
+
+      .ref tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .ref td:first-child {
+        white-space: nowrap;
+        width: 1%;
+      }
+
+      .ref td:last-child {
+        color: var(--muted);
+      }
+
+      .ref code {
+        font-size: 13px;
+        color: var(--accent);
+      }
+
+      @media (max-width: 600px) {
+        .ref td {
+          display: block;
+          width: auto;
+          padding: 0 16px;
+          border: 0;
         }
 
-        .header {
-            text-align: center;
-            color: white;
-            padding: 60px 0;
+        .ref td:first-child {
+          padding-top: 10px;
+          width: auto;
         }
 
-        .header h1 {
-            font-size: 3.5rem;
-            margin-bottom: 20px;
-            font-weight: 700;
+        .ref td:last-child {
+          padding-bottom: 10px;
+          border-bottom: 1px solid var(--border);
+          font-size: 13.5px;
         }
 
-        .header p {
-            font-size: 1.3rem;
-            opacity: 0.9;
-            max-width: 600px;
-            margin: 0 auto;
+        .ref tr:last-child td:last-child {
+          border-bottom: 0;
         }
+      }
 
-        .badge {
-            display: inline-block;
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 0.9rem;
-            margin: 10px 5px;
-        }
+      .ref .verb {
+        display: inline-block;
+        min-width: 54px;
+        font: 700 11px var(--mono);
+        color: var(--muted);
+      }
 
-        .content {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-            margin-top: -30px;
-            position: relative;
-        }
+      /* Closing CTA */
+      .closing {
+        text-align: center;
+      }
 
-        .section {
-            padding: 60px 40px;
-            border-bottom: 1px solid #f0f0f0;
-        }
+      .closing .section-head {
+        margin: 0 auto 28px;
+      }
 
-        .section:last-child {
-            border-bottom: none;
-        }
+      .closing .cta {
+        justify-content: center;
+        margin-bottom: 0;
+      }
 
-        .section h2 {
-            font-size: 2.5rem;
-            margin-bottom: 30px;
-            color: #2c3e50;
-            text-align: center;
-        }
+      footer {
+        border-top: 1px solid var(--border);
+        padding: 28px 0;
+        color: var(--faint);
+        font-size: 14px;
+      }
 
-        .section h3 {
-            font-size: 1.8rem;
-            margin: 40px 0 20px 0;
-            color: #34495e;
-        }
+      footer .wrap {
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
 
-        .features {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 30px;
-            margin-top: 40px;
-        }
+      footer a {
+        color: var(--muted);
+        text-decoration: none;
+      }
 
-        .feature {
-            text-align: center;
-            padding: 30px;
-            border-radius: 8px;
-            background: #f8f9fa;
-            transition: transform 0.3s ease;
-        }
+      footer a:hover {
+        color: var(--text);
+      }
 
-        .feature:hover {
-            transform: translateY(-5px);
-        }
+      footer .links {
+        margin-left: auto;
+        display: flex;
+        gap: 20px;
+      }
 
-        .feature-icon {
-            font-size: 3rem;
-            margin-bottom: 20px;
-        }
-
-        .feature h4 {
-            font-size: 1.3rem;
-            margin-bottom: 15px;
-            color: #2c3e50;
-        }
-
-        .code-block {
-            background: #2d3748;
-            color: #e2e8f0;
-            padding: 20px;
-            border-radius: 8px;
-            font-family: 'Monaco', 'Menlo', monospace;
-            font-size: 0.9rem;
-            overflow-x: auto;
-            margin: 20px 0;
-            position: relative;
-            white-space: pre-wrap;
-        }
-
-        .code-block::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, #667eea, #764ba2);
-        }
-
-        .tabs {
-            display: flex;
-            margin-bottom: 20px;
-            border-bottom: 1px solid #e1e5e9;
-        }
-
-        .tab {
-            padding: 12px 24px;
-            cursor: pointer;
-            background: none;
-            border: none;
-            border-bottom: 3px solid transparent;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-        }
-
-        .tab.active {
-            border-bottom-color: #667eea;
-            color: #667eea;
-            font-weight: 600;
-        }
-
-        .tab-content {
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        .api-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 20px 0;
-        }
-
-        .api-table th,
-        .api-table td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #e1e5e9;
-        }
-
-        .api-table th {
-            background: #f8f9fa;
-            font-weight: 600;
-            color: #2c3e50;
-        }
-
-        .method-name {
-            font-family: monospace;
-            font-weight: 600;
-            color: #667eea;
-        }
-
-        .param-type {
-            font-family: monospace;
-            color: #e83e8c;
-            font-size: 0.9rem;
-        }
-
-        .install-commands {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-            margin: 30px 0;
-        }
-
-        .install-card {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-            border-left: 4px solid #667eea;
-        }
-
-        .install-card h4 {
-            color: #2c3e50;
-            margin-bottom: 10px;
-        }
-
-        .install-card code {
-            background: #2d3748;
-            color: #e2e8f0;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 0.9rem;
-        }
-
-        .footer {
-            text-align: center;
-            padding: 40px;
-            color: white;
-        }
-
-        .footer a {
-            color: #667eea;
-            text-decoration: none;
-        }
-
-        .footer a:hover {
-            text-decoration: underline;
-        }
-
-        @media (max-width: 768px) {
-            .header h1 {
-                font-size: 2.5rem;
-            }
-
-            .section {
-                padding: 40px 20px;
-            }
-
-            .features {
-                grid-template-columns: 1fr;
-            }
-        }
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+      }
     </style>
-</head>
-<body>
-    <div class="container">
-        <header class="header">
-            <h1>SproutDB</h1>
-            <p>A tiny, dependency-free TypeScript key-value store with pluggable persistence and advanced querying</p>
-            <div>
-                <span class="badge">TypeScript First</span>
-                <span class="badge">Zero Dependencies</span>
-                <span class="badge">REST API</span>
-                <span class="badge">Advanced Queries</span>
-            </div>
-        </header>
+  </head>
 
-        <main class="content">
-            <section class="section">
-                <h2>🚀 Quick Start</h2>
+  <body>
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <symbol
+        id="i-copy"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <rect x="9" y="9" width="12" height="12" rx="2" />
+        <path d="M5 15V5a2 2 0 0 1 2-2h10" />
+      </symbol>
+      <symbol
+        id="i-check"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="M20 6 9 17l-5-5" />
+      </symbol>
+      <symbol
+        id="i-check-circle"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <circle cx="12" cy="12" r="9" />
+        <path d="m8.5 12 2.5 2.5 4.5-5" />
+      </symbol>
+      <symbol id="i-github" viewBox="0 0 24 24" fill="currentColor">
+        <path
+          d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.61.07-.61 1 .07 1.53 1.03 1.53 1.03.89 1.53 2.34 1.09 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.56-1.11-4.56-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.64 0 0 .84-.27 2.75 1.02a9.6 9.6 0 0 1 5 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.37.2 2.39.1 2.64.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.85v2.74c0 .27.18.58.69.48A10 10 0 0 0 12 2Z"
+        />
+      </symbol>
+    </svg>
 
-                <div class="install-commands">
-                    <div class="install-card">
-                        <h4>Install via npm</h4>
-                        <code>npm install sproutdb</code>
-                    </div>
-                    <div class="install-card">
-                        <h4>Install via pnpm</h4>
-                        <code>pnpm add sproutdb</code>
-                    </div>
-                    <div class="install-card">
-                        <h4>Try instantly with npx</h4>
-                        <code>npx sproutdb --port 3001</code>
-                    </div>
-                </div>
+    <nav aria-label="Main">
+      <div class="wrap">
+        <a class="logo" href="#top">
+          <svg viewBox="0 0 32 32" aria-hidden="true">
+            <path d="M16 30V15" stroke="var(--accent)" stroke-width="3" stroke-linecap="round" />
+            <path d="M16 16C16 9 11 5 4 5c0 7 5 11 12 11Z" fill="var(--accent)" />
+            <path d="M16 13c0-5 4-9 11-9 0 6-4 9-11 9Z" fill="var(--accent)" opacity=".7" />
+          </svg>
+          SproutDB
+        </a>
+        <div class="nav-links">
+          <a class="optional" href="#features">Features</a>
+          <a class="optional" href="#dashboard">Dashboard</a>
+          <a href="#reference">Reference</a>
+          <a href="https://github.com/BenSimmers/sproutdb">GitHub</a>
+        </div>
+      </div>
+    </nav>
 
-                <h3>As a Library</h3>
-                <div class="code-block">
-import { create, table } from 'sproutdb';
+    <header class="hero" id="top">
+      <div class="wrap">
+        <div>
+          <h1>A tiny database that <em>grows</em> with your prototype.</h1>
+          <p class="lede">
+            SproutDB is a typed, in-memory TypeScript database with Mongo-style queries. Use it as a library, or run it
+            as a mock REST server with a live dashboard for your frontend and tests.
+          </p>
+          <div class="cta">
+            <a class="btn primary" href="#get-started">Get started</a>
+            <a class="btn" href="https://github.com/BenSimmers/sproutdb"
+              ><svg aria-hidden="true">
+                <use href="#i-github" /></svg
+              >View on GitHub</a
+            >
+          </div>
+          <div class="install">
+            <span class="prompt" aria-hidden="true">$</span>
+            <code id="install-cmd">npm install sproutdb</code>
+            <button class="copy" type="button" data-copy="install-cmd" aria-label="Copy install command">
+              <svg class="idle" aria-hidden="true">
+                <use href="#i-copy" />
+              </svg>
+              <svg class="done" aria-hidden="true">
+                <use href="#i-check" />
+              </svg>
+            </button>
+          </div>
+        </div>
 
-const db = create({
-  users: table&lt;{ id: number; name: string; email: string }&gt;(),
-  posts: table&lt;{ id: number; title: string; content: string }&gt;(),
+        <div class="window">
+          <div class="tabs" role="tablist" aria-label="Code examples">
+            <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+            <button class="tab" role="tab" id="tab-lib" aria-selected="true" aria-controls="panel-lib">app.ts</button>
+            <button class="tab" role="tab" id="tab-cli" aria-selected="false" aria-controls="panel-cli" tabindex="-1">
+              terminal
+            </button>
+            <button class="tab" role="tab" id="tab-test" aria-selected="false" aria-controls="panel-test" tabindex="-1">
+              api.test.ts
+            </button>
+          </div>
+          <pre
+            role="tabpanel"
+            id="panel-lib"
+            aria-labelledby="tab-lib"
+            tabindex="0"
+          ><code><span class="k">import</span> { create, table, persist } <span class="k">from</span> <span class="s">'sproutdb'</span>;
+<span class="k">import</span> { localStorageAdapter } <span class="k">from</span> <span class="s">'sproutdb'</span>;
+
+<span class="k">const</span> db = <span class="f">create</span>({
+  users: <span class="f">table</span>&lt;User&gt;({ key: <span class="s">'id'</span> }),
 });
 
-// Insert data
-db.users.insert({ id: 1, name: 'Alice', email: 'alice@example.com' });
+<span class="f">persist</span>(db, <span class="f">localStorageAdapter</span>(<span class="s">'my-app'</span>));
 
-// Find with advanced queries
-const adults = db.users.find({
-  where: { age: { $gte: 18 } },
-  sort: { name: 'asc' },
-  limit: 10
-});
+db.users.<span class="f">insert</span>({ id: <span class="n">1</span>, name: <span class="s">'Alice'</span>, age: <span class="n">30</span> });
 
-// Complex conditions
-const result = db.users.find({
+db.users.<span class="f">find</span>({
   where: {
-    $or: [
-      { name: { $regex: /^A/ } },
-      { age: { $lt: 30 } }
-    ]
-  }
-});
-                </div>
+    age: { <span class="p">$gte</span>: <span class="n">18</span> },
+    <span class="s">'address.city'</span>: <span class="s">'Paris'</span>,
+  },
+  sort: { name: <span class="s">'asc'</span> },
+  limit: <span class="n">10</span>,
+});</code></pre>
+          <pre
+            role="tabpanel"
+            id="panel-cli"
+            aria-labelledby="tab-cli"
+            tabindex="0"
+            hidden
+          ><code><span class="c">$</span> npx sproutdb --seed sprout.json --persist data.json
 
-                <h3>As a Test Database Server</h3>
-                <div class="code-block">
-# Start server
-npx sproutdb --port 3001
+Server running on port http://localhost:3000
+Dashboard: http://localhost:3000/dashboard/
 
-# With seed data
-npx sproutdb --seed sprout.json
+<span class="c">$</span> curl <span class="s">'localhost:3000/tables/users?age[$gte]=18&amp;_sort=-age'</span>
+[{ <span class="s">"id"</span>: <span class="n">1</span>, <span class="s">"name"</span>: <span class="s">"Alice"</span>, <span class="s">"age"</span>: <span class="n">30</span> }]
 
-# API endpoints available at http://localhost:3001
-curl -X POST http://localhost:3001/tables/users/insert \
-  -H "Content-Type: application/json" \
-  -d '{"id": 1, "name": "Alice", "email": "alice@example.com"}'
-                </div>
-            </section>
+<span class="c">$</span> curl -X POST localhost:3000/tables/users \
+    -H <span class="s">'Content-Type: application/json'</span> \
+    -d <span class="s">'{"name": "Bob", "age": 25}'</span>
+{ <span class="s">"name"</span>: <span class="s">"Bob"</span>, <span class="s">"age"</span>: <span class="n">25</span>, <span class="s">"id"</span>: <span class="n">2</span> }</code></pre>
+          <pre
+            role="tabpanel"
+            id="panel-test"
+            aria-labelledby="tab-test"
+            tabindex="0"
+            hidden
+          ><code><span class="k">import</span> request <span class="k">from</span> <span class="s">'supertest'</span>;
+<span class="k">import</span> { createServer } <span class="k">from</span> <span class="s">'sproutdb/server'</span>;
 
-            <section class="section">
-                <h2>✨ Features</h2>
+<span class="f">test</span>(<span class="s">'loads a user'</span>, <span class="k">async</span> () =&gt; {
+  <span class="c">// A fresh, isolated server for every test</span>
+  <span class="k">const</span> { app } = <span class="f">createServer</span>({
+    seed: { users: [{ id: <span class="n">1</span>, name: <span class="s">'Alice'</span> }] },
+  });
 
-                <div class="features">
-                    <div class="feature">
-                        <div class="feature-icon">🔍</div>
-                        <h4>Advanced Queries</h4>
-                        <p>Range queries, regex matching, OR logic, sorting, and pagination</p>
-                    </div>
-                    <div class="feature">
-                        <div class="feature-icon">⚡</div>
-                        <h4>TypeScript First</h4>
-                        <p>Full type safety with TypeScript support and type-safe queries</p>
-                    </div>
-                    <div class="feature">
-                        <div class="feature-icon">🔌</div>
-                        <h4>Pluggable Persistence</h4>
-                        <p>Extend with custom storage backends (JSON, SQLite, etc.)</p>
-                    </div>
-                    <div class="feature">
-                        <div class="feature-icon">🌐</div>
-                        <h4>REST API Server</h4>
-                        <p>Built-in HTTP server for testing and development</p>
-                    </div>
-                    <div class="feature">
-                        <div class="feature-icon">📦</div>
-                        <h4>Zero Dependencies</h4>
-                        <p>Lightweight and fast with no external dependencies</p>
-                    </div>
-                    <div class="feature">
-                        <div class="feature-icon">🌱</div>
-                        <h4>Data Seeding</h4>
-                        <p>Load initial data from JSON files or folders</p>
-                    </div>
-                </div>
-            </section>
+  <span class="k">const</span> res = <span class="k">await</span> <span class="f">request</span>(app).<span class="f">get</span>(<span class="s">'/tables/users/1'</span>);
 
-            <section class="section">
-                <h2>📚 API Reference</h2>
+  <span class="f">expect</span>(res.body.name).<span class="f">toBe</span>(<span class="s">'Alice'</span>);
+});</code></pre>
+        </div>
+      </div>
+    </header>
 
-                <h3>Database Operations</h3>
-                <table class="api-table">
-                    <thead>
-                        <tr>
-                            <th>Method</th>
-                            <th>Description</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><span class="method-name">create(schema)</span></td>
-                            <td>Creates a new database instance with table schema</td>
-                        </tr>
-                        <tr>
-                            <td><span class="method-name">table&lt;T&gt;()</span></td>
-                            <td>Creates a new table for records of type T</td>
-                        </tr>
-                    </tbody>
-                </table>
-
-                <h3>Table Methods</h3>
-                <table class="api-table">
-                    <thead>
-                        <tr>
-                            <th>Method</th>
-                            <th>Parameters</th>
-                            <th>Description</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><span class="method-name">insert(record)</span></td>
-                            <td><span class="param-type">T</span></td>
-                            <td>Inserts a new record into the table</td>
-                        </tr>
-                        <tr>
-                            <td><span class="method-name">find(query?)</span></td>
-                            <td><span class="param-type">QueryOptions&lt;T&gt;</span></td>
-                            <td>Finds records with advanced filtering, sorting, pagination</td>
-                        </tr>
-                        <tr>
-                            <td><span class="method-name">all()</span></td>
-                            <td></td>
-                            <td>Returns all records in the table</td>
-                        </tr>
-                        <tr>
-                            <td><span class="method-name">update(query, update)</span></td>
-                            <td><span class="param-type">QueryOptions&lt;T&gt;, Partial&lt;T&gt;</span></td>
-                            <td>Updates records matching the query</td>
-                        </tr>
-                        <tr>
-                            <td><span class="method-name">delete(query)</span></td>
-                            <td><span class="param-type">QueryOptions&lt;T&gt;</span></td>
-                            <td>Deletes records matching the query</td>
-                        </tr>
-                        <tr>
-                            <td><span class="method-name">load(records)</span></td>
-                            <td><span class="param-type">T[]</span></td>
-                            <td>Loads multiple records into the table</td>
-                        </tr>
-                    </tbody>
-                </table>
-
-                <h3>Query Operators</h3>
-                <div class="tabs">
-                    <button class="tab active" onclick="showTab('comparison')">Comparison</button>
-                    <button class="tab" onclick="showTab('logical')">Logical</button>
-                    <button class="tab" onclick="showTab('element')">Element</button>
-                    <button class="tab" onclick="showTab('options')">Query Options</button>
-                </div>
-
-                <div id="comparison" class="tab-content active">
-                    <table class="api-table">
-                        <thead>
-                            <tr>
-                                <th>Operator</th>
-                                <th>Description</th>
-                                <th>Example</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td><code>$gt</code></td>
-                                <td>Greater than</td>
-                                <td><code>{ age: { $gt: 18 } }</code></td>
-                            </tr>
-                            <tr>
-                                <td><code>$gte</code></td>
-                                <td>Greater than or equal</td>
-                                <td><code>{ age: { $gte: 21 } }</code></td>
-                            </tr>
-                            <tr>
-                                <td><code>$lt</code></td>
-                                <td>Less than</td>
-                                <td><code>{ age: { $lt: 65 } }</code></td>
-                            </tr>
-                            <tr>
-                                <td><code>$lte</code></td>
-                                <td>Less than or equal</td>
-                                <td><code>{ age: { $lte: 65 } }</code></td>
-                            </tr>
-                            <tr>
-                                <td><code>$ne</code></td>
-                                <td>Not equal</td>
-                                <td><code>{ status: { $ne: 'inactive' } }</code></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div id="logical" class="tab-content">
-                    <table class="api-table">
-                        <thead>
-                            <tr>
-                                <th>Operator</th>
-                                <th>Description</th>
-                                <th>Example</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td><code>$or</code></td>
-                                <td>Logical OR</td>
-                                <td><code>{ $or: [{ name: 'Alice' }, { age: { $lt: 30 } }] }</code></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div id="element" class="tab-content">
-                    <table class="api-table">
-                        <thead>
-                            <tr>
-                                <th>Operator</th>
-                                <th>Description</th>
-                                <th>Example</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td><code>$in</code></td>
-                                <td>In array</td>
-                                <td><code>{ status: { $in: ['active', 'pending'] } }</code></td>
-                            </tr>
-                            <tr>
-                                <td><code>$nin</code></td>
-                                <td>Not in array</td>
-                                <td><code>{ role: { $nin: ['admin', 'moderator'] } }</code></td>
-                            </tr>
-                            <tr>
-                                <td><code>$regex</code></td>
-                                <td>Regular expression</td>
-                                <td><code>{ email: { $regex: /@example\.com$/ } }</code></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div id="options" class="tab-content">
-                    <table class="api-table">
-                        <thead>
-                            <tr>
-                                <th>Option</th>
-                                <th>Type</th>
-                                <th>Description</th>
-                                <th>Example</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td><code>where</code></td>
-                                <td><code>Partial&lt;T&gt; | WhereClause&lt;T&gt;</code></td>
-                                <td>Query conditions</td>
-                                <td><code>{ age: { $gte: 18 } }</code></td>
-                            </tr>
-                            <tr>
-                                <td><code>sort</code></td>
-                                <td><code>SortClause&lt;T&gt;</code></td>
-                                <td>Sort specification</td>
-                                <td><code>{ name: 'asc', age: 'desc' }</code></td>
-                            </tr>
-                            <tr>
-                                <td><code>limit</code></td>
-                                <td><code>number</code></td>
-                                <td>Maximum results</td>
-                                <td><code>10</code></td>
-                            </tr>
-                            <tr>
-                                <td><code>offset</code></td>
-                                <td><code>number</code></td>
-                                <td>Skip results</td>
-                                <td><code>20</code></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-
-            <section class="section">
-                <h2>🔧 Development</h2>
-
-                <div class="code-block">
-# Install dependencies
-pnpm install
-
-# Run tests
-pnpm test
-
-# Build the project
-pnpm build
-
-# Start development server
-pnpm dev
-                </div>
-
-                <h3>Project Structure</h3>
-                <div class="code-block">
-sproutdb/
-├── src/
-│   ├── index.ts          # Main exports
-│   ├── cli.ts           # Command line interface
-│   ├── server.ts        # HTTP server
-│   └── lib/
-│       ├── types/       # TypeScript definitions
-│       └── modules/     # Core functionality
-├── tests/               # Test files
-├── examples/            # Usage examples
-└── package.json         # Project configuration
-                </div>
-            </section>
-        </main>
-
-        <footer class="footer">
+    <main>
+      <section id="features">
+        <div class="wrap">
+          <div class="section-head">
+            <div class="kicker">Features</div>
+            <h2>Everything a prototype needs. Nothing it doesn't.</h2>
             <p>
-                Built with ❤️ using TypeScript •
-                <a href="https://github.com/BenSimmers/sproutdb">GitHub</a> •
-                <a href="https://www.npmjs.com/package/sproutdb">npm</a> •
-                Licensed under MIT
+              The core library has zero runtime dependencies and runs anywhere JavaScript does: Node, browsers and edge
+              runtimes.
             </p>
-        </footer>
-    </div>
+          </div>
+          <div class="features">
+            <div class="feature">
+              <div class="icon">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <circle cx="11" cy="11" r="7" />
+                  <path d="m20 20-3.5-3.5" />
+                </svg>
+              </div>
+              <h3>Mongo-style queries</h3>
+              <p>
+                Comparisons, sets, regex, <code>$and</code>/<code>$or</code>/<code>$not</code>, nested fields, sorting,
+                pagination and projection.
+              </p>
+            </div>
+            <div class="feature">
+              <div class="icon">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6Z" />
+                  <path d="m9 12 2 2 4-4" />
+                </svg>
+              </div>
+              <h3>Typed &amp; validated</h3>
+              <p>
+                Fully typed tables, plus runtime validation with Zod or any validator that has a
+                <code>safeParse</code> method.
+              </p>
+            </div>
+            <div class="feature">
+              <div class="icon">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <circle cx="8" cy="15" r="4" />
+                  <path d="m10.8 12.2 8.2-8.2M17 6l2 2M14 9l2 2" />
+                </svg>
+              </div>
+              <h3>Primary keys</h3>
+              <p>
+                Unique keys with <code>get</code> and <code>upsert</code>. Duplicates are rejected before anything
+                changes.
+              </p>
+            </div>
+            <div class="feature">
+              <div class="icon">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M3 12a9 9 0 0 1 15.5-6.2L21 8" />
+                  <path d="M21 3v5h-5" />
+                  <path d="M21 12a9 9 0 0 1-15.5 6.2L3 16" />
+                  <path d="M3 21v-5h5" />
+                </svg>
+              </div>
+              <h3>Transactions &amp; snapshots</h3>
+              <p>Roll every table back if something throws, or save and restore the whole database in one call.</p>
+            </div>
+            <div class="feature">
+              <div class="icon">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <ellipse cx="12" cy="5" rx="8" ry="3" />
+                  <path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5" />
+                  <path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3" />
+                </svg>
+              </div>
+              <h3>Pluggable persistence</h3>
+              <p>
+                Keep data in memory, <code>localStorage</code> or a JSON file, or write your own adapter in a few lines.
+              </p>
+            </div>
+            <div class="feature">
+              <div class="icon">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M13 2 4 14h7l-1 8 9-12h-7Z" />
+                </svg>
+              </div>
+              <h3>Change subscriptions</h3>
+              <p>
+                React to every insert, update and delete, whether that's in a UI, a cache or over server-sent events.
+              </p>
+            </div>
+            <div class="feature">
+              <div class="icon">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <rect x="3" y="4" width="18" height="16" rx="2" />
+                  <path d="m7 9 3 3-3 3M13 15h4" />
+                </svg>
+              </div>
+              <h3>Mock REST server</h3>
+              <p>
+                <code>npx sproutdb</code> gives you REST routes, query-string filters, automatic ids and seed data. No
+                config needed.
+              </p>
+            </div>
+            <div class="feature">
+              <div class="icon">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"
+                  />
+                </svg>
+              </div>
+              <h3>Test-friendly</h3>
+              <p>
+                An isolated server per test, reset and snapshot endpoints, and direct access to the database for setup.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="tint" id="get-started">
+        <div class="wrap">
+          <div class="section-head">
+            <div class="kicker">Get started</div>
+            <h2>One package, three ways to use it.</h2>
+            <p>
+              Start with a library call, move to a mock backend when your frontend needs one, and use the same server in
+              your tests.
+            </p>
+          </div>
+          <div class="modes">
+            <div class="mode">
+              <h3><span class="step">1</span>In your code</h3>
+              <p>A typed, in-memory store for scripts, prototypes and browser apps.</p>
+              <div class="window">
+                <pre><code><span class="k">const</span> db = <span class="f">create</span>({
+  todos: <span class="f">table</span>&lt;Todo&gt;({ key: <span class="s">'id'</span> }),
+});
+
+db.todos.<span class="f">insert</span>({ id: <span class="n">1</span>, done: <span class="k">false</span> });
+db.todos.<span class="f">find</span>({ where: { done: <span class="k">false</span> } });</code></pre>
+              </div>
+            </div>
+            <div class="mode">
+              <h3><span class="step">2</span>As a mock backend</h3>
+              <p>A REST API and dashboard for your frontend, seeded from JSON.</p>
+              <div class="window">
+                <pre><code><span class="c">$</span> npx sproutdb --seed sprout.json
+
+<span class="c">GET    /tables/todos?done=false</span>
+<span class="c">POST   /tables/todos</span>
+<span class="c">PATCH  /tables/todos/1</span>
+<span class="c">DELETE /tables/todos/1</span></code></pre>
+              </div>
+            </div>
+            <div class="mode">
+              <h3><span class="step">3</span>In your tests</h3>
+              <p>A fresh server per test, with no ports and no cleanup.</p>
+              <div class="window">
+                <pre><code><span class="k">const</span> { app, db } = <span class="f">createServer</span>();
+
+db.todos.<span class="f">insert</span>({ id: <span class="n">2</span>, done: <span class="k">true</span> });
+<span class="k">await</span> <span class="f">request</span>(app).<span class="f">get</span>(<span class="s">'/tables/todos'</span>);</code></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="dashboard">
+        <div class="wrap split">
+          <div>
+            <div class="kicker">Dashboard</div>
+            <h2>See your data change as it happens.</h2>
+            <p style="color: var(--muted); font-size: 17px; margin: 0">
+              Every SproutDB server includes a dashboard at <code>/dashboard</code>. Browse, filter and edit records
+              while your app runs, and watch changes arrive live.
+            </p>
+            <ul class="checks">
+              <li>
+                <svg aria-hidden="true">
+                  <use href="#i-check-circle" /></svg
+                ><span><b>Filter and sort</b> with the same query syntax as the API</span>
+              </li>
+              <li>
+                <svg aria-hidden="true">
+                  <use href="#i-check-circle" /></svg
+                ><span><b>Add, edit and delete</b> records in a JSON editor</span>
+              </li>
+              <li>
+                <svg aria-hidden="true">
+                  <use href="#i-check-circle" /></svg
+                ><span><b>Live updates</b> from your app, your tests or curl</span>
+              </li>
+              <li>
+                <svg aria-hidden="true">
+                  <use href="#i-check-circle" /></svg
+                ><span><b>Snapshot, restore and reset</b> the whole database</span>
+              </li>
+            </ul>
+          </div>
+          <div
+            class="preview"
+            role="img"
+            aria-label="Preview of the SproutDB dashboard showing a users table with a newly added row highlighted"
+          >
+            <div class="preview-bar">
+              <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+              <span class="url">localhost:3000/dashboard/#users</span>
+            </div>
+            <div class="preview-body">
+              <div class="preview-side">
+                <div class="label">Tables</div>
+                <div class="t on">users <span>4</span></div>
+                <div class="t">posts <span>12</span></div>
+                <div class="t">comments <span>38</span></div>
+              </div>
+              <div class="preview-main">
+                <div class="preview-head">
+                  <strong>users</strong>
+                  <span class="live"><i></i>Live</span>
+                  <span class="fake-btn">+ Add record</span>
+                </div>
+                <div class="fake-filter">role=admin&amp;age[$gte]=18</div>
+                <div class="preview-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>id</th>
+                        <th>name</th>
+                        <th>role</th>
+                        <th>age ▲</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td class="num">3</td>
+                        <td>Carol</td>
+                        <td>admin</td>
+                        <td class="num">24</td>
+                      </tr>
+                      <tr class="new">
+                        <td class="num">4</td>
+                        <td>Dana</td>
+                        <td>admin</td>
+                        <td class="num">29</td>
+                      </tr>
+                      <tr>
+                        <td class="num">1</td>
+                        <td>Alice</td>
+                        <td>admin</td>
+                        <td class="num">31</td>
+                      </tr>
+                      <tr>
+                        <td class="num">2</td>
+                        <td>Bob</td>
+                        <td>admin</td>
+                        <td class="num">42</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="tint" id="reference">
+        <div class="wrap">
+          <div class="section-head">
+            <div class="kicker">Reference</div>
+            <h2>A small API you can learn in minutes.</h2>
+            <p>
+              The highlights are below. The <a href="https://github.com/BenSimmers/sproutdb#readme">README</a> has
+              everything.
+            </p>
+          </div>
+          <div class="ref-grid">
+            <div class="ref">
+              <h3>Table methods</h3>
+              <table>
+                <tr>
+                  <td><code>insert(record)</code></td>
+                  <td>Add a record; returns the stored copy</td>
+                </tr>
+                <tr>
+                  <td><code>find(query?)</code></td>
+                  <td>Filter, sort, paginate and select fields</td>
+                </tr>
+                <tr>
+                  <td><code>findOne(query?)</code></td>
+                  <td>The first match, or <code>undefined</code></td>
+                </tr>
+                <tr>
+                  <td><code>count(query?)</code></td>
+                  <td>Number of matching records</td>
+                </tr>
+                <tr>
+                  <td><code>get(key)</code> / <code>upsert(record)</code></td>
+                  <td>Look up or replace by primary key</td>
+                </tr>
+                <tr>
+                  <td><code>update({ where }, changes)</code></td>
+                  <td>Merge changes; validated, all or nothing</td>
+                </tr>
+                <tr>
+                  <td><code>delete({ where })</code></td>
+                  <td>Remove matches; returns the count</td>
+                </tr>
+                <tr>
+                  <td><code>subscribe(listener)</code></td>
+                  <td>Listen for every change</td>
+                </tr>
+              </table>
+            </div>
+            <div class="ref">
+              <h3>Query operators</h3>
+              <table>
+                <tr>
+                  <td><code>{ name: 'Alice' }</code></td>
+                  <td>Equality, including deep equality for objects, arrays and dates</td>
+                </tr>
+                <tr>
+                  <td><code>$gt $gte $lt $lte</code></td>
+                  <td>Comparisons</td>
+                </tr>
+                <tr>
+                  <td><code>$eq $ne</code></td>
+                  <td>Equal / not equal</td>
+                </tr>
+                <tr>
+                  <td><code>$in $nin</code></td>
+                  <td>In / not in a list</td>
+                </tr>
+                <tr>
+                  <td><code>$regex</code></td>
+                  <td>Pattern match</td>
+                </tr>
+                <tr>
+                  <td><code>$exists</code></td>
+                  <td>Field present or missing</td>
+                </tr>
+                <tr>
+                  <td><code>$and $or $not</code></td>
+                  <td>Combine and negate conditions</td>
+                </tr>
+                <tr>
+                  <td><code>'address.city'</code></td>
+                  <td>Query nested fields with dot paths</td>
+                </tr>
+              </table>
+            </div>
+            <div class="ref">
+              <h3>Database helpers</h3>
+              <table>
+                <tr>
+                  <td><code>transaction(db, fn)</code></td>
+                  <td>Roll back every table if <code>fn</code> throws</td>
+                </tr>
+                <tr>
+                  <td><code>snapshot(db)</code></td>
+                  <td>Copy all data to a JSON-safe object</td>
+                </tr>
+                <tr>
+                  <td><code>restore(db, snapshot)</code></td>
+                  <td>Put a snapshot back</td>
+                </tr>
+                <tr>
+                  <td><code>persist(db, adapter)</code></td>
+                  <td>Load saved data, then save every change</td>
+                </tr>
+              </table>
+            </div>
+            <div class="ref">
+              <h3>REST endpoints</h3>
+              <table>
+                <tr>
+                  <td><span class="verb">GET</span><code>/tables/:table</code></td>
+                  <td>List, with query-string filters</td>
+                </tr>
+                <tr>
+                  <td><span class="verb">POST</span><code>/tables/:table</code></td>
+                  <td>Create (an id is assigned if missing)</td>
+                </tr>
+                <tr>
+                  <td><span class="verb">PATCH</span><code>/tables/:table/:id</code></td>
+                  <td>Merge fields into a record</td>
+                </tr>
+                <tr>
+                  <td><span class="verb">GET</span><code>/tables/:table/events</code></td>
+                  <td>Live changes (server-sent events)</td>
+                </tr>
+                <tr>
+                  <td><span class="verb">POST</span><code>/reset</code></td>
+                  <td>Back to the seed data</td>
+                </tr>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="closing">
+        <div class="wrap">
+          <div class="section-head">
+            <h2>Plant the seed.</h2>
+            <p>Install the library, or start a server with one command.</p>
+          </div>
+          <div class="cta">
+            <div class="install">
+              <span class="prompt" aria-hidden="true">$</span>
+              <code id="npx-cmd">npx sproutdb</code>
+              <button class="copy" type="button" data-copy="npx-cmd" aria-label="Copy npx command">
+                <svg class="idle" aria-hidden="true">
+                  <use href="#i-copy" />
+                </svg>
+                <svg class="done" aria-hidden="true">
+                  <use href="#i-check" />
+                </svg>
+              </button>
+            </div>
+            <a class="btn primary" href="https://www.npmjs.com/package/sproutdb">View on npm</a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="wrap">
+        <span>SproutDB · MIT License</span>
+        <div class="links">
+          <a href="https://github.com/BenSimmers/sproutdb">GitHub</a>
+          <a href="https://www.npmjs.com/package/sproutdb">npm</a>
+          <a href="https://github.com/BenSimmers/sproutdb/blob/main/CHANGELOG.md">Changelog</a>
+        </div>
+      </div>
+    </footer>
 
     <script>
-        function showTab(tabName) {
-            const contents = document.querySelectorAll('.tab-content');
-            contents.forEach(content => content.classList.remove('active'));
+      document.querySelectorAll("[data-copy]").forEach((button) => {
+        button.addEventListener("click", async () => {
+          try {
+            await navigator.clipboard.writeText(document.getElementById(button.dataset.copy).textContent);
+          } catch {
+            return;
+          }
+          button.classList.add("copied");
+          setTimeout(() => button.classList.remove("copied"), 1500);
+        });
+      });
 
-            const tabs = document.querySelectorAll('.tab');
-            tabs.forEach(tab => tab.classList.remove('active'));
-            document.getElementById(tabName).classList.add('active');
-
-            event.target.classList.add('active');
-        }
+      const tabs = [...document.querySelectorAll('[role="tab"]')];
+      const select = (tab) => {
+        tabs.forEach((t) => {
+          const selected = t === tab;
+          t.setAttribute("aria-selected", String(selected));
+          t.tabIndex = selected ? 0 : -1;
+          document.getElementById(t.getAttribute("aria-controls")).hidden = !selected;
+        });
+      };
+      tabs.forEach((tab, i) => {
+        tab.addEventListener("click", () => select(tab));
+        tab.addEventListener("keydown", (event) => {
+          const step = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
+          if (!step) return;
+          const next = tabs[(i + step + tabs.length) % tabs.length];
+          select(next);
+          next.focus();
+        });
+      });
     </script>
-</body>
+  </body>
 </html>

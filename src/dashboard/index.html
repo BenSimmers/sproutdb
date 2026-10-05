@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SproutDB Dashboard</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><path d='M16 30V15' stroke='%2322a06b' stroke-width='3' stroke-linecap='round'/><path d='M16 16C16 9 11 5 4 5c0 7 5 11 12 11Z' fill='%2322a06b'/><path d='M16 13c0-5 4-9 11-9 0 6-4 9-11 9Z' fill='%2334c17f'/></svg>">
+<link rel="stylesheet" href="./styles.css">
+<script type="module" src="./js/main.js"></script>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 30V15" stroke="var(--accent)" stroke-width="3" stroke-linecap="round"/><path d="M16 16C16 9 11 5 4 5c0 7 5 11 12 11Z" fill="var(--accent)"/><path d="M16 13c0-5 4-9 11-9 0 6-4 9-11 9Z" fill="var(--accent)" opacity=".7"/></svg>
+    SproutDB
+  </div>
+  <div class="status" role="status"><span class="dot" id="status-dot"></span><span id="status-text">Connecting…</span></div>
+  <div class="spacer"></div>
+  <div class="actions">
+    <button class="btn" id="snapshot-btn" type="button" title="Download every table as JSON">Download snapshot</button>
+    <button class="btn" id="restore-btn" type="button" title="Replace the database with a snapshot file">Restore…</button>
+    <input type="file" id="restore-file" accept="application/json,.json" hidden>
+    <button class="btn danger" id="reset-btn" type="button" title="Restore the seed data and drop tables created at runtime">Reset to seed</button>
+  </div>
+</header>
+
+<div class="layout">
+  <aside>
+    <section class="panel" aria-labelledby="tables-title">
+      <div class="panel-title" id="tables-title">Tables</div>
+      <ul class="table-list" id="table-list"></ul>
+      <form class="new-table" id="new-table-form">
+        <label class="sr-only" for="new-table-name">New table name</label>
+        <input id="new-table-name" placeholder="new_table" autocomplete="off" required>
+        <button class="btn" type="submit">Add</button>
+      </form>
+    </section>
+    <section class="panel" aria-labelledby="endpoints-title">
+      <div class="panel-title" id="endpoints-title">Busiest endpoints</div>
+      <ul class="endpoints" id="endpoints"></ul>
+    </section>
+  </aside>
+
+  <main>
+    <div class="stats">
+      <div class="panel stat"><div class="label">Records</div><div class="value" id="stat-records">–</div></div>
+      <div class="panel stat"><div class="label">Requests</div><div class="value" id="stat-requests">–</div></div>
+      <div class="panel stat"><div class="label">Errors</div><div class="value" id="stat-errors">–</div></div>
+      <div class="panel stat"><div class="label">Avg response</div><div class="value" id="stat-latency">–</div></div>
+      <div class="panel stat"><div class="label">Uptime</div><div class="value" id="stat-uptime">–</div></div>
+    </div>
+
+    <section class="panel" id="table-panel">
+      <div class="empty" id="no-table">Select or create a table to get started.</div>
+      <div id="table-view" hidden>
+        <div class="toolbar">
+          <h2 id="table-name"></h2>
+          <span class="live" id="live"><span class="dot"></span>Live</span>
+          <div class="spacer"></div>
+          <button class="btn primary" id="add-record-btn" type="button">+ Add record</button>
+          <button class="btn danger" id="drop-table-btn" type="button">Drop table</button>
+        </div>
+        <form class="filter" id="filter-form">
+          <label class="sr-only" for="filter-input">Filter</label>
+          <input id="filter-input" placeholder="role=admin&amp;age[$gte]=18" autocomplete="off" spellcheck="false">
+          <button class="btn" type="submit">Apply</button>
+          <button class="btn" type="button" id="clear-filter-btn">Clear</button>
+        </form>
+        <div class="hint">
+          Query-string filters, as in <code>GET /tables/:table</code>. For example
+          <code>name=Alice</code>, <code>age[$gt]=18</code>, <code>tags[$in]=a,b</code>, <code>email[$regex]=@example</code>, <code>address.city=Paris</code>.
+          Click a column heading to sort.
+        </div>
+        <div class="grid-wrap" id="grid-wrap">
+          <table>
+            <thead id="grid-head"></thead>
+            <tbody id="grid-body"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="no-rows" hidden></div>
+        <div class="pager">
+          <span id="page-info"></span>
+          <div class="actions">
+            <label for="page-size">Rows</label>
+            <select id="page-size">
+              <option>10</option><option selected>25</option><option>50</option><option>100</option>
+            </select>
+            <button class="btn small" id="prev-btn" type="button">← Prev</button>
+            <button class="btn small" id="next-btn" type="button">Next →</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<dialog id="record-dialog">
+  <form method="dialog" id="record-form">
+    <h3 id="record-title">Add record</h3>
+    <label class="sr-only" for="record-json">Record JSON</label>
+    <textarea id="record-json" spellcheck="false"></textarea>
+    <p class="dialog-error" id="record-error" role="alert"></p>
+    <div class="dialog-actions">
+      <button class="btn" value="cancel" formnovalidate type="submit">Cancel</button>
+      <button class="btn primary" id="record-save" value="save" type="submit">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+</body>
+</html>

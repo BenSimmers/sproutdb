@@ -8,12 +8,33 @@ const base = tseslint.config(
   eslintConfigPrettier,
 );
 
-// `tseslint.config(...)` returns a flat-config array. Merge it with an
-// additional flat-config block that declares the files to ignore using
-// the `ignores` property (replaces the deprecated .eslintignore behavior).
 export default [
   ...base,
   {
     ignores: ['dist/**', 'node_modules/**', 'coverage/**'],
+  },
+  {
+    rules: {
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+    },
+  },
+  {
+    files: ['src/dashboard/**/*.js'],
+    languageOptions: {
+      sourceType: 'module',
+      globals: {
+        Blob: 'readonly',
+        EventSource: 'readonly',
+        URL: 'readonly',
+        URLSearchParams: 'readonly',
+        clearTimeout: 'readonly',
+        document: 'readonly',
+        fetch: 'readonly',
+        history: 'readonly',
+        location: 'readonly',
+        setInterval: 'readonly',
+        setTimeout: 'readonly',
+      },
+    },
   },
 ];
