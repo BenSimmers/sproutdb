@@ -1,5 +1,5 @@
 ---
-"sproutdb": major
+"sproutdb": minor
 ---
 
 ## Query, persistence and server overhaul

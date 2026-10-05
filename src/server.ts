@@ -331,10 +331,12 @@ export function createServer(options: ServerOptions = {}): SproutServer {
 
   const getTable = (res: express.Response) => res.locals.table as AnyTable;
 
-  const handle = (fn: (req: express.Request, res: express.Response, t: AnyTable) => unknown): express.RequestHandler =>
+  type TableRequest = express.Request<Record<string, string>>;
+  
+  const handle = (fn: (req: TableRequest, res: express.Response, t: AnyTable) => unknown): express.RequestHandler =>
     (req, res) => {
       try {
-        fn(req, res, getTable(res));
+        fn(req as TableRequest, res, getTable(res));
       } catch (error) {
         sendError(res, error);
       }
